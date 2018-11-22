@@ -1,1 +1,2 @@
-Jticker aggregator application
+# Jticker aggregator application
+
