@@ -1,8 +1,11 @@
 import os
+import json
 import logging
 import asyncio
 
 from aiokafka import AIOKafkaConsumer
+from aioinflux import InfluxDBClient
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,6 +33,19 @@ async def consume():
     try:
         # Consume messages
         async for msg in consumer:
+            async with InfluxDBClient(host="influxdb", db='test') as client:
+                data = json.loads(msg.value)
+                await client.write({
+                    "measurement": "ticker_0",
+                    "time": data['time'],
+                    "tags": {
+                        "interval": data['interval'],
+                        "version": 0
+                    },
+                    "fields": {
+                        k: v for k, v in data.items() if k in {'open', 'close', 'high', 'low', 'volume'}
+                    }
+                })
             logger.info("consumed: %s, %s, %s, %s, %s, %s", msg.topic, msg.partition, msg.offset,
                         msg.key, msg.value, msg.timestamp)
     except Exception as e:
@@ -38,6 +54,7 @@ async def consume():
         logger.info("Stopping consumer (finally)")
         # Will leave consumer group; perform autocommit if enabled.
         await consumer.stop()
+
 
 loop.create_task(consume())
 loop.run_forever()
