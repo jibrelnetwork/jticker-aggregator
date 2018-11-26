@@ -32,8 +32,8 @@ async def consume():
 
     try:
         # Consume messages
-        async for msg in consumer:
-            async with InfluxDBClient(host="influxdb", db='test') as client:
+        async with InfluxDBClient(host="influxdb", db='test') as client:
+            async for msg in consumer:
                 data = json.loads(msg.value)
                 await client.write({
                     "measurement": "ticker_0",
@@ -43,11 +43,9 @@ async def consume():
                         "version": 0
                     },
                     "fields": {
-                        k: v for k, v in data.items() if k in {'open', 'close', 'high', 'low', 'volume'}
+                        k: float(v) for k, v in data.items() if k in {'open', 'close', 'high', 'low', 'volume'}
                     }
                 })
-            logger.info("consumed: %s, %s, %s, %s, %s, %s", msg.topic, msg.partition, msg.offset,
-                        msg.key, msg.value, msg.timestamp)
     except Exception as e:
         logger.exception("Exception happen %s", e)
     finally:
