@@ -58,5 +58,4 @@ async def consume():
         await consumer.stop()
 
 
-loop.create_task(consume())
-loop.run_forever()
+loop.run_until_complete(consume())
