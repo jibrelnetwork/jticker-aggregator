@@ -17,6 +17,9 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
 
 QUOTE_TOPIC = os.getenv('KAFKA_QUOTE_TOPIC', 'example_symbol_1m')
 
+INFLUX_HOST = os.getenv('INFLUX_HOST', 'influxdb')
+INFLUX_DB = os.getenv('INFLUX_DB', 'test')
+
 
 async def consume():
     consumer = AIOKafkaConsumer(
@@ -26,13 +29,12 @@ async def consume():
         group_id="aggregator"
     )
     logger.info("Starting consumer")
-    # Get cluster layout and join group `my-group`
+
     await consumer.start()
-    logger.info("Consumer started")
 
     try:
         # Consume messages
-        async with InfluxDBClient(host="influxdb", db='test') as client:
+        async with InfluxDBClient(host=INFLUX_HOST, db=INFLUX_DB) as client:
             async for msg in consumer:
                 data = json.loads(msg.value)
                 await client.write({
