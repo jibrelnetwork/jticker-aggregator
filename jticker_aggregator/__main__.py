@@ -45,7 +45,9 @@ async def consume():
                         "version": 0
                     },
                     "fields": {
-                        k: float(v) for k, v in data.items() if k in {'open', 'close', 'high', 'low', 'volume'}
+                        k: float(v) for k, v in data.items() if k in {
+                            'open', 'close', 'high', 'low', 'volume'
+                        }
                     }
                 })
     except Exception as e:
