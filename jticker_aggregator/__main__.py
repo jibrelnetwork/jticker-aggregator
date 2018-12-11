@@ -50,7 +50,7 @@ async def consume():
                     "fields": {
                         k: float(v) for k, v in data.items() if k in {
                             'open', 'close', 'high', 'low', 'quote_volume'
-                        }
+                        } and v is not None
                     }
                 }
                 logger.debug("Write to influx: %s", influx_record)
