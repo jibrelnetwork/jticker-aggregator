@@ -38,7 +38,6 @@ async def consume():
     # load topics from txt file
 
     with open(TOPICS_FILE) as fp:
-        # for line_n, topic in enumerate(['binance_BTCUSDT_60']):
         for line_n, topic in enumerate(fp.readlines()):
             topic = topic.strip()
             exchange, symbol, interval = topic.split('_')
@@ -84,8 +83,8 @@ async def consume():
                     },
                     "fields": {
                         k: float(v) for k, v in data.items() if k in {
-                        'open', 'close', 'high', 'low', 'quote_volume'
-                    } and v is not None
+                            'open', 'close', 'high', 'low', 'quote_volume'
+                        } and v is not None
                     }
                 }
                 logger.debug("Write to influx: %s", influx_record)
