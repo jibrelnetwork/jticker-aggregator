@@ -29,7 +29,7 @@ TOPICS_FILE = os.getenv('TOPICS_FILE', default_topics_file)
 
 
 async def consume():
-    _configure_logging('DEBUG')
+    _configure_logging('INFO')
 
     topic_map = {}
 
@@ -62,14 +62,12 @@ async def consume():
     if FROM_TOPIC_START:
         await consumer.seek_to_beginning()
 
-    logger.info('Go to loop')
-
     try:
         # Consume messages
         async with InfluxDBClient(host=INFLUX_HOST, db=INFLUX_DB) as client:
 
             async for msg in consumer:
-                logger.info('Msg received from Kafka %s', msg)
+                logger.debug('Msg received from Kafka %s', msg)
                 data = json.loads(msg.value)
 
                 topic_info = topic_map[msg.topic]
