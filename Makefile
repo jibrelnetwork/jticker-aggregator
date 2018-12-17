@@ -1,0 +1,5 @@
+lint:
+	pylama
+
+test:
+	pytest
