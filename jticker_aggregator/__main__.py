@@ -31,7 +31,7 @@ metadata = Metadata()
 
 
 async def consume():
-    _configure_logging('DEBUG')
+    _configure_logging('INFO')
 
     topic_map = {}
 
