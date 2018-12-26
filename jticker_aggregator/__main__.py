@@ -6,6 +6,7 @@ import asyncio
 from aiokafka import AIOKafkaConsumer
 from aioinflux import InfluxDBClient
 
+from .metadata import Metadata
 from .logging import _configure_logging
 
 
@@ -20,47 +21,48 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
 INFLUX_HOST = os.getenv('INFLUX_HOST', 'influxdb')
 INFLUX_DB = os.getenv('INFLUX_DB', 'test')
 
-FROM_TOPIC_START = bool(os.getenv('FROM_TOPIC_START', 'false') == 'true')
-
 default_topics_file = os.path.join(
     os.path.dirname(__file__), './kafka_topics.txt'
 )
 TOPICS_FILE = os.getenv('TOPICS_FILE', default_topics_file)
 
 
+metadata = Metadata()
+
+
 async def consume():
-    _configure_logging('INFO')
+    _configure_logging('DEBUG')
 
     topic_map = {}
 
-    # TODO: change the way topics loaded
-    # TODO: get ticker_id from api or other service linked with postgres
-    # load topics from txt file
-
-    with open(TOPICS_FILE) as fp:
-        for line_n, topic in enumerate(fp.readlines()):
-            topic = topic.strip()
-            exchange, symbol, interval = topic.split('_')
-            topic_map[topic] = {
-                'exchange': exchange,
-                'ticker_id': 'ticker_%i' % line_n,
-                'interval': int(interval)
-            }
-    all_topics = topic_map.keys()
     consumer = AIOKafkaConsumer(
-        *all_topics,
         loop=loop,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         group_id="aggregator",
     )
 
-    logger.info("Starting consumer")
-    logger.debug("Subscribe to topics: %s", topic_map.keys())
-
     await consumer.start()
 
-    if FROM_TOPIC_START:
-        await consumer.seek_to_beginning()
+    logger.info("Loading new topics")
+    available_topics = await consumer.topics()
+
+    failed_topics = []
+    for topic in available_topics:
+        try:
+            logger.debug("Topic %s found", topic)
+            exchange, symbol, interval = topic.split('_')
+            trading_pair = await metadata.sync_trading_pair(exchange, symbol)
+            logger.debug("Topic trading pair: %s", trading_pair)
+            topic_map[topic] = trading_pair
+        except Exception:
+            failed_topics.append(topic)
+            logger.exception("Can't process topic %s (skip)", topic)
+
+    logger.info('%i topics loaded', len(topic_map))
+
+    consumer.subscribe(available_topics)
+
+    logger.debug("Subscribe to topics: %s", available_topics)
 
     try:
         # Consume messages
@@ -70,13 +72,15 @@ async def consume():
                 logger.debug('Msg received from Kafka %s', msg)
                 data = json.loads(msg.value)
 
+                exchange, symbol, interval = msg.topic.split('_')
+
                 topic_info = topic_map[msg.topic]
 
                 influx_record = {
-                    "measurement": topic_info['ticker_id'],
+                    "measurement": topic_info.measurement,
                     "time": data['time'],
                     "tags": {
-                        "interval": topic_info['interval'],
+                        "interval": int(interval),
                         "version": 0
                     },
                     "fields": {
