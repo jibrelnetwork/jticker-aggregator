@@ -31,7 +31,7 @@ metadata = Metadata()
 
 
 async def consume():
-    _configure_logging('INFO')
+    _configure_logging('DEBUG')
 
     topic_map = {}
 
@@ -60,14 +60,25 @@ async def consume():
 
     logger.info('%i topics loaded', len(topic_map))
 
-    consumer.subscribe(available_topics)
+    await consumer.stop()
+
+    logger.info("Consumer stopped before subscribe.")
+
+    consumer = AIOKafkaConsumer(
+        *available_topics,
+        loop=loop,
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        group_id="aggregator",
+    )
+
+    await consumer.start()
 
     logger.debug("Subscribe to topics: %s", available_topics)
 
     try:
         # Consume messages
         async with InfluxDBClient(host=INFLUX_HOST, db=INFLUX_DB) as client:
-
+            logger.info("Client acquired")
             async for msg in consumer:
                 logger.debug('Msg received from Kafka %s', msg)
                 data = json.loads(msg.value)

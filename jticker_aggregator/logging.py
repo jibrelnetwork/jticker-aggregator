@@ -20,6 +20,10 @@ def _configure_logging(log_level='INFO'):
             'jticker_aggregator': {
                 'level': log_level,
                 'handlers': ['console'],
+            },
+            'aiokafka': {
+                'level': 'INFO',
+                'handlers': ['console']
             }
         }
     })
