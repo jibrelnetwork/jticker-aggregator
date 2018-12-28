@@ -3,4 +3,4 @@ lint:
 	mypy jticker_aggregator
 
 test:
-	pytest
+	pytest --cov jticker_aggregator
