@@ -26,8 +26,10 @@ def metadata_mock():
         'quote_asset': None
     }
 
-    with mock.patch('jticker_aggregator.metadata.Metadata._get', return_value=example_pair_list_response):
-        with mock.patch('jticker_aggregator.metadata.Metadata._post', return_value=example_create_response):
+    with mock.patch('jticker_aggregator.metadata.Metadata._get',
+                    return_value=example_pair_list_response):
+        with mock.patch('jticker_aggregator.metadata.Metadata._post',
+                        return_value=example_create_response):
             yield Metadata()
 
 

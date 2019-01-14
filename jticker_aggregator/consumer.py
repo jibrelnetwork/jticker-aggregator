@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import List, Dict
 
 from aiokafka import AIOKafkaConsumer
 

@@ -1,10 +1,6 @@
 import os
-import json
 import logging
 import asyncio
-
-from aiokafka import AIOKafkaConsumer
-from aioinflux import InfluxDBClient
 
 from .consumer import Consumer
 from .series import SeriesStorage
