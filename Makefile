@@ -3,4 +3,4 @@ lint:
 	mypy jticker_aggregator
 
 test:
-	pytest --cov jticker_aggregator
+	pytest --cov jticker_aggregator --cov-report term-missing
