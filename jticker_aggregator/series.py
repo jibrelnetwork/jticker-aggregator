@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from aioinflux import InfluxDBClient
 
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class SeriesStorage:
 
-    """Candle series storage abstraction.
+    """Candle series storage abstraction for aggregator.
 
     Can be used as context manager:
 
@@ -25,8 +26,25 @@ class SeriesStorage:
             storage.close()
     """
 
-    def __init__(self, host='localhost', db_name='jticker'):
-        self.client = InfluxDBClient(host=host, db=db_name)
+    def __init__(self,
+                 host: str = "localhost",
+                 port: int = 8086,
+                 db_name: str = "jticker",
+                 ssl: bool = False,
+                 unix_socket: Optional[str] = None,
+                 username: Optional[str] = None,
+                 password: Optional[str] = None,
+                 **kwargs):
+        self.client = InfluxDBClient(
+            host=host,
+            port=port,
+            db=db_name,
+            unix_socket=unix_socket,
+            ssl=ssl,
+            username=username,
+            password=password,
+            **kwargs
+        )
 
     async def store_candle(self, measurement: str, candle: Candle):
         """Store candle in influx measurement.

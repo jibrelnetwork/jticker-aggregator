@@ -15,13 +15,27 @@ loop = asyncio.get_event_loop()
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
 
-
 INFLUX_HOST = os.getenv('INFLUX_HOST', 'influxdb')
+INFLUX_PORT = int(os.getenv('INFLUX_PORT', '8086'))
 INFLUX_DB = os.getenv('INFLUX_DB', 'test')
+INFLUX_USERNAME = os.getenv('INFLUX_USERNAME')
+INFLUX_PASSWORD = os.getenv('INFLUX_PASSWORD')
+INFLUX_SSL = bool(os.getenv('INFLUX_SSL', 'false') == 'true')
+INFLUX_UNIX_SOCKET = os.getenv('INFLUX_UNIX_SOCKET')
+
+METADATA_URL = os.getenv('METADATA_URL', 'http://meta:8000/')
 
 
-metadata = Metadata()
-storage = SeriesStorage(host=INFLUX_HOST, db_name=INFLUX_DB)
+metadata = Metadata(service_url=METADATA_URL)
+storage = SeriesStorage(
+    host=INFLUX_HOST,
+    db_name=INFLUX_DB,
+    port=INFLUX_PORT,
+    ssl=INFLUX_SSL,
+    unix_socket=INFLUX_UNIX_SOCKET,
+    username=INFLUX_USERNAME,
+    password=INFLUX_PASSWORD
+)
 
 
 async def consume():
