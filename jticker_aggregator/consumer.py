@@ -1,6 +1,7 @@
 import json
 import asyncio
 import logging
+from typing import Dict
 
 from aiokafka import AIOKafkaConsumer
 from async_timeout import timeout
@@ -19,11 +20,10 @@ class Consumer(AIOKafkaConsumer):
     """Candles consumer.
 
     Wrap kafka consumer: parse candles from received messages while iterating.
-
-    TODO: we need to gather topics from meta api (all kafka topics gathered
-        for a while)
-
     """
+
+    #: map topic name to trading pair metadata received from ASSETS_TOPIC
+    _topic_map: Dict[str, Dict]
 
     def __init__(self, *topics, **kwargs):
         """Candle consumer CTOR.
@@ -37,19 +37,26 @@ class Consumer(AIOKafkaConsumer):
     async def start(self):
         """Start consumer.
 
-        Also read topics list and subscribe to all of them (FIXME)
+        Read assets topic to get quotes topics list.
 
         :return:
         """
+        self.subscribe(await self.available_topics())
+
+    async def available_topics(self):
         self.subscribe(topics=[ASSETS_TOPIC])
+
         await super().start()
 
         available_topics = []
+
+        self._topic_map = {}
 
         await self.seek_to_beginning()
 
         while True:
             try:
+                # TODO: get max offset for partition and read messages before
                 async with timeout(1.0):
                     msg = await self.getone()
                     data = json.loads(msg.value)
@@ -57,6 +64,7 @@ class Consumer(AIOKafkaConsumer):
                     if topic:
                         logger.debug("Topic found: %s", topic)
                         available_topics.append(topic)
+                        self._topic_map[topic] = data
                     else:
                         logger.error("No kafka topic found: %s", data)
             except asyncio.TimeoutError:
@@ -66,8 +74,7 @@ class Consumer(AIOKafkaConsumer):
 
         logger.info("Topics loading complete. %i topics found.",
                     len(available_topics))
-
-        self.subscribe(topics=available_topics)
+        return available_topics
 
     async def __anext__(self):
         """Receive message, parse candle and yield it.
@@ -92,12 +99,12 @@ class Consumer(AIOKafkaConsumer):
         :param data: message data
         :return:
         """
-        exchange, symbol, interval = topic.split('_')
+        spec = self._topic_map[topic]
 
         return Candle(
-            exchange=exchange,
-            symbol=symbol,
-            interval=int(interval),
+            exchange=spec['exchange'],
+            symbol=spec['symbol'],
+            interval=int(spec['interval']),
             timestamp=data.pop('time'),
             **data
         )

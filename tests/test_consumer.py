@@ -42,11 +42,11 @@ def consumer_patch(patch_message=None):
         'aiokafka.consumer.consumer.AIOKafkaClient._metadata_update': {
             'return_value': True,
         },
-        'aiokafka.consumer.consumer.AIOKafkaConsumer.topics': {
-            'new': mock.CoroutineMock(return_value=['abc']),
-        },
         'aiokafka.consumer.consumer.AIOKafkaConsumer.__anext__': {
             'new': mock.CoroutineMock(return_value=patch_message),
+        },
+        'jticker_aggregator.consumer.Consumer.available_topics': {
+            'return_value': ['binance_USDBTC_60']
         }
     }
 
@@ -70,6 +70,13 @@ async def test_iteration(event_loop):
             bootstrap_servers=('kafka:9092',),
             group_id="aggregator",
         )
+        consumer._topic_map = {
+            'binance_USDBTC_60': {
+                'exchange': 'binance',
+                'symbol': 'USDBTC',
+                'interval': 60
+            }
+        }
 
         await consumer.start()
 
