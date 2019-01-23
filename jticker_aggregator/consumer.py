@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 ASSETS_TOPIC = 'assets_metadata'
 
 
+class AssetsConsumer(AIOKafkaConsumer):
+
+    """Consume assets and trading pairs metadata
+    """
+
+
 class Consumer(AIOKafkaConsumer):
 
     """Candles consumer.
@@ -87,7 +93,10 @@ class Consumer(AIOKafkaConsumer):
             msg_type = data.pop('type', 'candle')
             logger.debug('Msg received from Kafka (%s): %s', msg_type, msg)
             if msg_type == 'candle':
-                return self.parse_candle(msg.topic, data)
+                try:
+                    return self.parse_candle(msg.topic, data)
+                except:  # noqa
+                    logger.exception("Can't parse candle from message %s", msg)
             else:
                 logger.error('Unhandled message type %s in %s Kafka topic: %s',
                              msg_type, msg.topic, data)
@@ -104,7 +113,8 @@ class Consumer(AIOKafkaConsumer):
         return Candle(
             exchange=spec['exchange'],
             symbol=spec['symbol'],
-            interval=int(spec['interval']),
+            # FIXME: no interval in assets metadata
+            interval=int(spec.get('interval', 60)),
             timestamp=data.pop('time'),
             **data
         )
