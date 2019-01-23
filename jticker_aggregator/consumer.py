@@ -1,12 +1,17 @@
 import json
+import asyncio
 import logging
 
 from aiokafka import AIOKafkaConsumer
+from async_timeout import timeout
 
 from .candle import Candle
 
 
 logger = logging.getLogger(__name__)
+
+
+ASSETS_TOPIC = 'assets_metadata'
 
 
 class Consumer(AIOKafkaConsumer):
@@ -36,10 +41,32 @@ class Consumer(AIOKafkaConsumer):
 
         :return:
         """
+        self.subscribe(topics=[ASSETS_TOPIC])
         await super().start()
-        logger.info("Loading available kafka topics...")
-        available_topics = await self.topics()
-        logger.info("Topics loading complete.")
+
+        available_topics = []
+
+        await self.seek_to_beginning()
+
+        while True:
+            try:
+                async with timeout(1.0):
+                    msg = await self.getone()
+                    data = json.loads(msg.value)
+                    topic = data.get('topic')
+                    if topic:
+                        logger.debug("Topic found: %s", topic)
+                        available_topics.append(topic)
+                    else:
+                        logger.error("No kafka topic found: %s", data)
+            except asyncio.TimeoutError:
+                # all published assets received, break loop
+                logger.debug("All published trading pairs loaded.")
+                break
+
+        logger.info("Topics loading complete. %i topics found.",
+                    len(available_topics))
+
         self.subscribe(topics=available_topics)
 
     async def __anext__(self):
