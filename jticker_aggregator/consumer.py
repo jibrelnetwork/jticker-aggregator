@@ -1,7 +1,10 @@
 import json
+import asyncio
 import logging
+from typing import Dict
 
 from aiokafka import AIOKafkaConsumer
+from async_timeout import timeout
 
 from .candle import Candle
 
@@ -9,16 +12,24 @@ from .candle import Candle
 logger = logging.getLogger(__name__)
 
 
+ASSETS_TOPIC = 'assets_metadata'
+
+
+class AssetsConsumer(AIOKafkaConsumer):
+
+    """Consume assets and trading pairs metadata
+    """
+
+
 class Consumer(AIOKafkaConsumer):
 
     """Candles consumer.
 
     Wrap kafka consumer: parse candles from received messages while iterating.
-
-    TODO: we need to gather topics from meta api (all kafka topics gathered
-        for a while)
-
     """
+
+    #: map topic name to trading pair metadata received from ASSETS_TOPIC
+    _topic_map: Dict[str, Dict]
 
     def __init__(self, *topics, **kwargs):
         """Candle consumer CTOR.
@@ -32,15 +43,44 @@ class Consumer(AIOKafkaConsumer):
     async def start(self):
         """Start consumer.
 
-        Also read topics list and subscribe to all of them (FIXME)
+        Read assets topic to get quotes topics list.
 
         :return:
         """
+        self.subscribe(await self.available_topics())
+
+    async def available_topics(self):
+        self.subscribe(topics=[ASSETS_TOPIC])
+
         await super().start()
-        logger.info("Loading available kafka topics...")
-        available_topics = await self.topics()
-        logger.info("Topics loading complete.")
-        self.subscribe(topics=available_topics)
+
+        available_topics = []
+
+        self._topic_map = {}
+
+        await self.seek_to_beginning()
+
+        while True:
+            try:
+                # TODO: get max offset for partition and read messages before
+                async with timeout(1.0):
+                    msg = await self.getone()
+                    data = json.loads(msg.value)
+                    topic = data.get('topic')
+                    if topic:
+                        logger.debug("Topic found: %s", topic)
+                        available_topics.append(topic)
+                        self._topic_map[topic] = data
+                    else:
+                        logger.error("No kafka topic found: %s", data)
+            except asyncio.TimeoutError:
+                # all published assets received, break loop
+                logger.debug("All published trading pairs loaded.")
+                break
+
+        logger.info("Topics loading complete. %i topics found.",
+                    len(available_topics))
+        return available_topics
 
     async def __anext__(self):
         """Receive message, parse candle and yield it.
@@ -53,7 +93,10 @@ class Consumer(AIOKafkaConsumer):
             msg_type = data.pop('type', 'candle')
             logger.debug('Msg received from Kafka (%s): %s', msg_type, msg)
             if msg_type == 'candle':
-                return self.parse_candle(msg.topic, data)
+                try:
+                    return self.parse_candle(msg.topic, data)
+                except:  # noqa
+                    logger.exception("Can't parse candle from message %s", msg)
             else:
                 logger.error('Unhandled message type %s in %s Kafka topic: %s',
                              msg_type, msg.topic, data)
@@ -65,12 +108,13 @@ class Consumer(AIOKafkaConsumer):
         :param data: message data
         :return:
         """
-        exchange, symbol, interval = topic.split('_')
+        spec = self._topic_map[topic]
 
         return Candle(
-            exchange=exchange,
-            symbol=symbol,
-            interval=int(interval),
+            exchange=spec['exchange'],
+            symbol=spec['symbol'],
+            # FIXME: no interval in assets metadata
+            interval=int(spec.get('interval', 60)),
             timestamp=data.pop('time'),
             **data
         )
