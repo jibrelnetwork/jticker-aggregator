@@ -9,6 +9,10 @@ from .candle import Candle
 logger = logging.getLogger(__name__)
 
 
+def to_float(v):
+    return float(v) if v is not None else None
+
+
 class SeriesStorage:
 
     """Candle series storage abstraction for aggregator.
@@ -65,8 +69,8 @@ class SeriesStorage:
                 'high': float(candle.high),
                 'low': float(candle.low),
                 'close': float(candle.close),
-                'base_volume': candle.base_volume,
-                'quote_volume': candle.quote_volume,
+                'base_volume': to_float(candle.base_volume),
+                'quote_volume': to_float(candle.quote_volume),
             }
         }
         logger.debug("Write candle %s to influx (%s measurement): %s",
