@@ -161,6 +161,8 @@ class Metadata:
         for trading_pair_data in data:
             self._load_pair(trading_pair_data)
 
+        self._trading_pairs_loaded = True
+
     def _load_pair(self, trading_pair_data) -> TradingPair:
         """Load pair to memory.
 
