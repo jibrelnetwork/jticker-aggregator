@@ -18,7 +18,7 @@ def main():
 async def fill_collection(consumer, collection):
     start_time = time.time()
     click.echo("fill collection")
-    await consumer.start(get_available_topics=False)
+    await consumer.start()
 
     # get last offset
     partitions = list(consumer.assignment())
@@ -42,8 +42,8 @@ async def fill_collection(consumer, collection):
             logging.info("Found the end offset %s", end)
             break
         i += 1
-        if i % 100 == 0:
-            click.echo("100 candles processed")
+        if i % 1000 == 0:
+            click.echo("1000 candles processed")
 
     click.echo("Total of %i candles processed for %s secs" % (
                i, time.time() - start_time))
