@@ -47,21 +47,21 @@ async def consume():
         loop=loop,
     )
 
-    try:
-        await consumer.start()
+    await consumer.start()
 
-        async for candle in consumer:
+    async for candle in consumer:
+        try:
             trading_pair = await metadata.get_trading_pair(
                 exchange=candle.exchange, symbol=candle.symbol
             )
             await storage.store_candle(trading_pair.measurement, candle)
-    except Exception as e:
-        logger.exception(
-            "Exception happen while consuming candles from Kafka %s", e
-        )
-    finally:
-        logger.info("Stopping consumer (finally)")
-        # Will leave consumer group; perform autocommit if enabled.
-        await consumer.stop()
+        except Exception as e:
+            logger.exception(
+                "Exception happen while consuming candles from Kafka %s", candle
+            )
+
+    logger.info("Stopping consumer (finally)")
+    # Will leave consumer group; perform autocommit if enabled.
+    await consumer.stop()
 
 loop.run_until_complete(consume())
