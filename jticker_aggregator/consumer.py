@@ -124,11 +124,11 @@ class Consumer(CandleConsumer):
         :param data: message data
         :return:
         """
-        spec = self._topic_map.get('topic', {})
+        spec = self._topic_map.get(topic, {})
 
         return Candle(
-            exchange=spec.get('exchange'),
-            symbol=spec.get('symbol'),
+            exchange=spec['exchange'],
+            symbol=spec['symbol'],
             # FIXME: no interval in assets metadata
             interval=int(spec.get('interval', 60)),
             timestamp=data.pop('time'),
