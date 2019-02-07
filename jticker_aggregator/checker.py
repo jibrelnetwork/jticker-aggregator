@@ -47,13 +47,13 @@ class RangeCollection:
                               r.start, value)
                 r.start = value
                 if i > 0 and self.ranges[i - 1].end >= r.start:
-                    self.merge_ranges(i-1, i)
+                    self.merge_ranges(i - 1, i)
             elif r.end < value:
                 logging.debug("End edge moved to new value %i <- %i",
                               value, r.end)
                 r.end = value
                 if len(self.ranges) > i + 1 and self.ranges[i + 1].start <= r.end:
-                    self.merge_ranges(i, i+1)
+                    self.merge_ranges(i, i + 1)
             break
         else:
             self.ranges.append(Range(value - self.threshold, value + self.threshold))

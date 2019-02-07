@@ -55,7 +55,7 @@ async def consume():
                 exchange=candle.exchange, symbol=candle.symbol
             )
             await storage.store_candle(trading_pair.measurement, candle)
-        except Exception as e:
+        except:  # noqa
             logger.exception(
                 "Exception happen while consuming candles from Kafka %s", candle
             )
