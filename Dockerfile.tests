@@ -8,4 +8,6 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 
 USER app
 
-ENTRYPOINT ["/app/run.sh", "test"]
+ENTRYPOINT ["/app/run.sh"]
+
+CMD ["test"]
