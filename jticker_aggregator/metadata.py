@@ -115,41 +115,6 @@ class Metadata:
         logger.info('New trading pair created %s', trading_pair)
         return trading_pair
 
-    async def sync_trading_pair(self, exchange, symbol):
-        """Sync trading pair with metadata service.
-
-        Create trading pair if it is not present in metadata, generate
-        measurement name if it was empty.
-
-        :param exchange:
-        :param symbol:
-        :return:
-        """
-        trading_pair = await self.get_trading_pair(exchange, symbol)
-        if not trading_pair:
-            raise Exception("Trading pair not found %s %s", exchange, symbol)
-        if not trading_pair.measurement:
-            trading_pair.gen_measurement_name()
-        await self.update_measurement(trading_pair)
-        return trading_pair
-
-    async def update_measurement(self, trading_pair: TradingPair):
-        """Set active influxdb measurement for trading pair.
-
-        :param trading_pair_id:
-        :param kafka_topic:
-        :return:
-        """
-        assert trading_pair.measurement, "Can't update measurement to None"
-        measurement = trading_pair.measurement
-        url = urljoin(
-            self.service_url,
-            f'/v1/trading_pairs/{trading_pair.id}/set_measurement'
-        )
-        response = await self._post(url, data=measurement.encode())
-        logger.debug('Measurement for trading pair %i updated %s:\n%s',
-                     trading_pair.id, measurement, response)
-
     async def _load_trading_pairs(self):
         """Load trading pairs into memory.
 

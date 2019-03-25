@@ -39,17 +39,3 @@ async def test_get_trading_pair():
         pair = await metadata.get_trading_pair('binance', 'BTCUSD')
         repr(pair)
         await metadata.get_trading_pair('binance', 'BTCUSD_NOT_EXIST')
-
-
-@pytest.mark.asyncio
-async def test_update_measurement():
-    with metadata_mock() as metadata:
-        pair = await metadata.get_trading_pair('binance', 'BTCUSD')
-
-        await metadata.update_measurement(pair)
-
-
-@pytest.mark.asyncio
-async def test_sync_trading_pair():
-    with metadata_mock() as metadata:
-        await metadata.sync_trading_pair('binance', 'BTCUSD_NOT_EXIST')
