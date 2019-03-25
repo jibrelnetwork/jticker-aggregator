@@ -8,7 +8,7 @@ RUN addgroup -g 111 app \
 RUN apk update
 
 # build dependencies
-RUN apk add gcc musl-dev
+RUN apk add gcc musl-dev g++
 
 # optional aiokafka dependency https://aiokafka.readthedocs.io/en/stable/#optional-snappy-install
 RUN apk add snappy-dev
