@@ -23,4 +23,4 @@ COPY --chown=app:app . /app
 
 USER app
 
-ENTRYPOINT ["/app/run.sh"]
+ENTRYPOINT ["/app/run.sh", "app"]
