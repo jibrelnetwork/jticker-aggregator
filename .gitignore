@@ -50,6 +50,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .testmondata
+.tmontmp
 
 # Sphinx documentation
 docs/_build/
