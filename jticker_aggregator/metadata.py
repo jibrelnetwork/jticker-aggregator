@@ -23,7 +23,7 @@ class TradingPair:
     topic: Optional[str]
 
     def __init__(self, id, exchange, symbol, base_asset, quote_asset,
-                 measurement=None, topic=None):
+                 measurement=None, topic=None, **kwargs):
         """Trading pair CTOR.
 
         :param id: internal trading pair id
@@ -71,7 +71,7 @@ class Metadata:
     #: Flag informing that trading pairs loaded into memory and can be queried
     _trading_pairs_loaded = False
 
-    def __init__(self, service_url="http://meta:8000/", api_version=1):
+    def __init__(self, service_url="http://jassets:8000/", api_version=1):
         self.service_url = service_url
         self.api_version = api_version
 
@@ -108,9 +108,9 @@ class Metadata:
             'exchange': exchange,
             'symbol': symbol,
         }
-        if measurement:
-            data['measurement'] = measurement
+
         resp_data = await self._post(url, json=data)
+        resp_data['exchange'] = resp_data['exchange']['id']
         trading_pair = self._load_pair(resp_data)
         logger.info('New trading pair created %s', trading_pair)
         return trading_pair
@@ -123,7 +123,9 @@ class Metadata:
         url = urljoin(self.service_url, '/v1/trading_pairs/')
         data = await self._get(url)
 
-        for trading_pair_data in data:
+        for trading_pair_data in data['result']:
+            logger.debug("Trading pair data %s", trading_pair_data)
+            trading_pair_data['exchange'] = trading_pair_data['exchange']['id']
             self._load_pair(trading_pair_data)
 
         self._trading_pairs_loaded = True
@@ -137,6 +139,7 @@ class Metadata:
         :return:
         """
         trading_pair = TradingPair(**trading_pair_data)
+        logger.debug("Exchange data %s %s", trading_pair.exchange, trading_pair)
         self._trading_pair_by_symbol[trading_pair.exchange][trading_pair.symbol] = trading_pair  # noqa
         self._trading_pair_by_id[trading_pair.id] = trading_pair
         return trading_pair
