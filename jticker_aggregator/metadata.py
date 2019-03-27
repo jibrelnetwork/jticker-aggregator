@@ -71,12 +71,16 @@ class Metadata:
     #: Flag informing that trading pairs loaded into memory and can be queried
     _trading_pairs_loaded = False
 
+    #: map slug to exchange id
+    _exchange_map: Dict[str, int]
+
     def __init__(self, service_url="http://jassets:8000/", api_version=1):
         self.service_url = service_url
         self.api_version = api_version
 
         self._trading_pair_by_symbol = defaultdict(dict)
         self._trading_pair_by_id = {}
+        self._exchange_map = {}
 
     async def get_trading_pair(self, exchange: str, symbol: str):
         """Get TradingPair for provided symbol and exchange.
@@ -90,6 +94,8 @@ class Metadata:
 
         if symbol in self._trading_pair_by_symbol[exchange]:
             return self._trading_pair_by_symbol[exchange][symbol]
+        logger.info("No symbol %s with exchange %s found, will be created",
+                    symbol, exchange, self._trading_pair_by_symbol)
         return await self.create_trading_pair(exchange, symbol)
 
     async def create_trading_pair(self, exchange, symbol, measurement=None):
@@ -110,7 +116,8 @@ class Metadata:
         }
 
         resp_data = await self._post(url, json=data)
-        resp_data['exchange'] = resp_data['exchange']['id']
+        logger.info("Create trading pair response %s", resp_data)
+        resp_data['exchange'] = resp_data['exchange']['slug']
         trading_pair = self._load_pair(resp_data)
         logger.info('New trading pair created %s', trading_pair)
         return trading_pair
@@ -125,7 +132,7 @@ class Metadata:
 
         for trading_pair_data in data['result']:
             logger.debug("Trading pair data %s", trading_pair_data)
-            trading_pair_data['exchange'] = trading_pair_data['exchange']['id']
+            trading_pair_data['exchange'] = trading_pair_data['exchange']['slug']
             self._load_pair(trading_pair_data)
 
         self._trading_pairs_loaded = True
