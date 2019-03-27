@@ -15,8 +15,12 @@ RUN apk add snappy-dev
 
 WORKDIR /app
 
-COPY --chown=app:app requirements.txt /app/
 RUN pip install --no-cache-dir -U pip
+
+COPY --chown=app:app requirements-heavy.txt /app/
+RUN pip install --no-cache-dir -r requirements-heavy.txt
+
+COPY --chown=app:app requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app . /app
