@@ -95,7 +95,7 @@ class Metadata:
         if symbol in self._trading_pair_by_symbol[exchange]:
             return self._trading_pair_by_symbol[exchange][symbol]
         logger.info("No symbol %s with exchange %s found, will be created",
-                    symbol, exchange, self._trading_pair_by_symbol)
+                    symbol, exchange)
         return await self.create_trading_pair(exchange, symbol)
 
     async def create_trading_pair(self, exchange, symbol, measurement=None):
