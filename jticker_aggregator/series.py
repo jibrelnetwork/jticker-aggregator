@@ -97,7 +97,7 @@ class SeriesStorage:
         name mapping.
         """
         resp = await self.client.query(f"SELECT * FROM {MAPPING_MEASUREMENT};")
-        if not 'series' in resp['results'][0]:
+        if 'series' not in resp['results'][0]:
             # empty results, fresh mapping
             self._measurements_loaded = True
             return
