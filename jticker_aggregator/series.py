@@ -97,6 +97,10 @@ class SeriesStorage:
         name mapping.
         """
         resp = await self.client.query(f"SELECT * FROM {MAPPING_MEASUREMENT};")
+        if not 'series' in resp['results'][0]:
+            # empty results, fresh mapping
+            self._measurements_loaded = True
+            return
         series = resp['results'][0]['series'][0]
         result = [dict(zip(series['columns'], row)) for row in series['values']]
         for item in result:
