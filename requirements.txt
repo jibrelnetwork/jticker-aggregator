@@ -7,7 +7,7 @@ aiohttp-swagger==1.0.5
 aioinflux==0.5.1
 
 # for grabber and aggregator
-aiokafka==0.5.0
+aiokafka==0.5.1
 
 # optional aiokafka dependencies
 lz4tools==1.3.1.2
