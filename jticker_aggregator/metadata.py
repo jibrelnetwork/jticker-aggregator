@@ -23,7 +23,7 @@ class TradingPair:
     topic: Optional[str]
 
     def __init__(self, id, exchange, symbol, base_asset, quote_asset,
-                 measurement=None, topic=None):
+                 measurement=None, topic=None, **kwargs):
         """Trading pair CTOR.
 
         :param id: internal trading pair id
@@ -71,12 +71,16 @@ class Metadata:
     #: Flag informing that trading pairs loaded into memory and can be queried
     _trading_pairs_loaded = False
 
-    def __init__(self, service_url="http://meta:8000/", api_version=1):
+    #: map slug to exchange id
+    _exchange_map: Dict[str, int]
+
+    def __init__(self, service_url="http://jassets:8000/", api_version=1):
         self.service_url = service_url
         self.api_version = api_version
 
         self._trading_pair_by_symbol = defaultdict(dict)
         self._trading_pair_by_id = {}
+        self._exchange_map = {}
 
     async def get_trading_pair(self, exchange: str, symbol: str):
         """Get TradingPair for provided symbol and exchange.
@@ -90,6 +94,8 @@ class Metadata:
 
         if symbol in self._trading_pair_by_symbol[exchange]:
             return self._trading_pair_by_symbol[exchange][symbol]
+        logger.info("No symbol %s with exchange %s found, will be created",
+                    symbol, exchange)
         return await self.create_trading_pair(exchange, symbol)
 
     async def create_trading_pair(self, exchange, symbol, measurement=None):
@@ -108,47 +114,13 @@ class Metadata:
             'exchange': exchange,
             'symbol': symbol,
         }
-        if measurement:
-            data['measurement'] = measurement
+
         resp_data = await self._post(url, json=data)
+        logger.info("Create trading pair response %s", resp_data)
+        resp_data['exchange'] = resp_data['exchange']['slug']
         trading_pair = self._load_pair(resp_data)
         logger.info('New trading pair created %s', trading_pair)
         return trading_pair
-
-    async def sync_trading_pair(self, exchange, symbol):
-        """Sync trading pair with metadata service.
-
-        Create trading pair if it is not present in metadata, generate
-        measurement name if it was empty.
-
-        :param exchange:
-        :param symbol:
-        :return:
-        """
-        trading_pair = await self.get_trading_pair(exchange, symbol)
-        if not trading_pair:
-            raise Exception("Trading pair not found %s %s", exchange, symbol)
-        if not trading_pair.measurement:
-            trading_pair.gen_measurement_name()
-        await self.update_measurement(trading_pair)
-        return trading_pair
-
-    async def update_measurement(self, trading_pair: TradingPair):
-        """Set active influxdb measurement for trading pair.
-
-        :param trading_pair_id:
-        :param kafka_topic:
-        :return:
-        """
-        assert trading_pair.measurement, "Can't update measurement to None"
-        measurement = trading_pair.measurement
-        url = urljoin(
-            self.service_url,
-            f'/v1/trading_pairs/{trading_pair.id}/set_measurement'
-        )
-        response = await self._post(url, data=measurement.encode())
-        logger.debug('Measurement for trading pair %i updated %s:\n%s',
-                     trading_pair.id, measurement, response)
 
     async def _load_trading_pairs(self):
         """Load trading pairs into memory.
@@ -158,7 +130,9 @@ class Metadata:
         url = urljoin(self.service_url, '/v1/trading_pairs/')
         data = await self._get(url)
 
-        for trading_pair_data in data:
+        for trading_pair_data in data['result']:
+            logger.debug("Trading pair data %s", trading_pair_data)
+            trading_pair_data['exchange'] = trading_pair_data['exchange']['slug']
             self._load_pair(trading_pair_data)
 
         self._trading_pairs_loaded = True
@@ -172,6 +146,7 @@ class Metadata:
         :return:
         """
         trading_pair = TradingPair(**trading_pair_data)
+        logger.debug("Exchange data %s %s", trading_pair.exchange, trading_pair)
         self._trading_pair_by_symbol[trading_pair.exchange][trading_pair.symbol] = trading_pair  # noqa
         self._trading_pair_by_id[trading_pair.id] = trading_pair
         return trading_pair

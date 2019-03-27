@@ -3,6 +3,9 @@
 pytest
 pytest-cov
 pytest-asyncio
+pytest-watch
+pytest-testmon
+asynctest
 
 pylama
 mypy

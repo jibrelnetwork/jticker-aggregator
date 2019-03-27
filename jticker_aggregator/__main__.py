@@ -47,6 +47,8 @@ async def consume():
         loop=loop,
     )
 
+    await storage.load_measurements_map()
+
     await consumer.start()
 
     async for candle in consumer:
@@ -54,7 +56,8 @@ async def consume():
             trading_pair = await metadata.get_trading_pair(
                 exchange=candle.exchange, symbol=candle.symbol
             )
-            await storage.store_candle(trading_pair.measurement, candle)
+            measurement = await storage.get_measurement(trading_pair)
+            await storage.store_candle(measurement, candle)
         except:  # noqa
             logger.exception(
                 "Exception happen while consuming candles from Kafka %s", candle
