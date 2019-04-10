@@ -25,6 +25,8 @@ INFLUX_UNIX_SOCKET = os.getenv('INFLUX_UNIX_SOCKET')
 
 METADATA_URL = os.getenv('METADATA_URL', 'http://meta:8000/')
 
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+
 
 metadata = Metadata(service_url=METADATA_URL)
 storage = SeriesStorage(
@@ -39,7 +41,7 @@ storage = SeriesStorage(
 
 
 async def consume():
-    _configure_logging('DEBUG')
+    _configure_logging(LOG_LEVEL)
 
     consumer = Consumer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
