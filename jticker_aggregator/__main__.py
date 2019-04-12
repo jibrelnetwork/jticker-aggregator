@@ -32,7 +32,8 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
-    sentry_sdk.init(SENTRY_DSN)
+    with open('version.txt', 'r') as fp:
+        sentry_sdk.init(SENTRY_DSN, release=fp.read().strip())
 
 metadata = Metadata(service_url=METADATA_URL)
 storage = SeriesStorage(
