@@ -2,6 +2,8 @@ import os
 import logging
 import asyncio
 
+import sentry_sdk
+
 from .consumer import Consumer
 from .series import SeriesStorage
 from .metadata import Metadata
@@ -27,6 +29,10 @@ METADATA_URL = os.getenv('METADATA_URL', 'http://meta:8000/')
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+
+if SENTRY_DSN:
+    sentry_sdk.init(SENTRY_DSN)
 
 metadata = Metadata(service_url=METADATA_URL)
 storage = SeriesStorage(
@@ -41,32 +47,37 @@ storage = SeriesStorage(
 
 
 async def consume():
-    _configure_logging(LOG_LEVEL)
+    try:
+        _configure_logging(LOG_LEVEL)
 
-    consumer = Consumer(
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id="aggregator",
-        loop=loop,
-    )
+        consumer = Consumer(
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+            group_id="aggregator",
+            loop=loop,
+        )
 
-    await storage.load_measurements_map()
+        await storage.load_measurements_map()
 
-    await consumer.start()
+        await consumer.start()
 
-    async for candle in consumer:
-        try:
-            trading_pair = await metadata.get_trading_pair(
-                exchange=candle.exchange, symbol=candle.symbol
-            )
-            measurement = await storage.get_measurement(trading_pair)
-            await storage.store_candle(measurement, candle)
-        except:  # noqa
-            logger.exception(
-                "Exception happen while consuming candles from Kafka %s", candle
-            )
+        async for candle in consumer:
+            try:
+                trading_pair = await metadata.get_trading_pair(
+                    exchange=candle.exchange, symbol=candle.symbol
+                )
+                measurement = await storage.get_measurement(trading_pair)
+                await storage.store_candle(measurement, candle)
+            except:  # noqa
+                logger.exception(
+                    "Exception happen while consuming candles from Kafka %s", candle
+                )
+    except:  # noqa
+        sentry_sdk.capture_exception()
+        logger.exception("Exit on unhandled exception")
+    finally:
+        logger.info("Stopping consumer (finally)")
+        # Will leave consumer group; perform autocommit if enabled.
+        await consumer.stop()
 
-    logger.info("Stopping consumer (finally)")
-    # Will leave consumer group; perform autocommit if enabled.
-    await consumer.stop()
 
 loop.run_until_complete(consume())
