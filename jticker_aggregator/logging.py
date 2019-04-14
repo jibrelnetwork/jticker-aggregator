@@ -9,6 +9,7 @@ def _configure_logging(log_level='INFO'):
 
     logging.config.dictConfig({
         'version': 1,
+        'disable_existing_loggers': False,
         'formatters': {
             'default': {
                 'class': 'pythonjsonlogger.jsonlogger.JsonFormatter',
