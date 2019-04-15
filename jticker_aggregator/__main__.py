@@ -1,4 +1,3 @@
-import os
 import logging
 import asyncio
 
@@ -9,27 +8,25 @@ from .series import SeriesStorage
 from .metadata import Metadata
 from .logging import _configure_logging
 
+from .settings import (
+    SENTRY_DSN,
+    KAFKA_BOOTSTRAP_SERVERS,
+    INFLUX_HOST,
+    INFLUX_PORT,
+    INFLUX_USERNAME,
+    INFLUX_PASSWORD,
+    INFLUX_UNIX_SOCKET,
+    INFLUX_SSL,
+    INFLUX_DB,
+    METADATA_URL,
+    LOG_LEVEL,
+)
+
 
 logger = logging.getLogger('jticker_aggregator')
 
 loop = asyncio.get_event_loop()
 
-
-KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
-
-INFLUX_HOST = os.getenv('INFLUX_HOST', 'influxdb')
-INFLUX_PORT = int(os.getenv('INFLUX_PORT', '8086'))
-INFLUX_DB = os.getenv('INFLUX_DB', 'test')
-INFLUX_USERNAME = os.getenv('INFLUX_USERNAME')
-INFLUX_PASSWORD = os.getenv('INFLUX_PASSWORD')
-INFLUX_SSL = bool(os.getenv('INFLUX_SSL', 'false') == 'true')
-INFLUX_UNIX_SOCKET = os.getenv('INFLUX_UNIX_SOCKET')
-
-METADATA_URL = os.getenv('METADATA_URL', 'http://meta:8000/')
-
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-
-SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
     with open('version.txt', 'r') as fp:
