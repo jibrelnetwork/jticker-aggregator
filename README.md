@@ -13,3 +13,5 @@ Available environment variables:
 * `INFLUX_PASSWORD` (default: `None`) — influxdb password
 * `INFLUX_UNIX_SOCKET` (default: `None`) — unix socket to use
 * `METADATA_URL` (default: `http://meta:8000`) — `meta` service url accessible from aggregator instance
+* `LOG_LEVEL` (default: `INFO`) — log level (`ERROR`, `INFO`, `WARN`, `DEBUG`)
+* `SENTRY_DSN` (default: _empty_) — Sentry DSN connection string

@@ -1,12 +1,18 @@
 import logging.config
 
 
+ALLOWED_LOG_LEVELS = {'ERROR', 'INFO', 'DEBUG', 'WARN'}
+
+
 def _configure_logging(log_level='INFO'):
+    assert log_level in ALLOWED_LOG_LEVELS, "Invalid LOG_LEVEL %s" % log_level
+
     logging.config.dictConfig({
         'version': 1,
+        'disable_existing_loggers': False,
         'formatters': {
             'default': {
-                'class': 'logging.Formatter',
+                'class': 'pythonjsonlogger.jsonlogger.JsonFormatter',
                 'format': '%(asctime)s %(levelname)-8s %(message)s'
             }
         },
@@ -20,10 +26,6 @@ def _configure_logging(log_level='INFO'):
             'jticker_aggregator': {
                 'level': log_level,
                 'handlers': ['console'],
-            },
-            'aiokafka': {
-                'level': 'INFO',
-                'handlers': ['console']
             }
         }
     })

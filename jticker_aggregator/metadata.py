@@ -5,6 +5,8 @@ from collections import defaultdict
 from urllib.parse import urljoin
 from aiohttp import ClientSession
 
+from .settings import HTTP_USER_AGENT
+
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +155,10 @@ class Metadata:
 
     async def _get(self, url):  # pragma: no cover
         async with ClientSession() as session:
-            async with session.get(url) as resp:
+            headers = {
+                'User-Agent': HTTP_USER_AGENT
+            }
+            async with session.get(url, headers=headers) as resp:
                 if resp.status != 200:
                     logger.error('Error while loading trading pairs (%i): %s',
                                  resp.status, await resp.text())
@@ -163,6 +168,9 @@ class Metadata:
         return data
 
     async def _post(self, url, **kwargs):  # pragma: no cover
+        kwargs['headers'] = dict(kwargs.get('headers', {}), **{
+            'User-Agent': HTTP_USER_AGENT
+        })
         async with ClientSession() as session:
             async with session.post(url, **kwargs) as resp:
                 if not resp.status == 200:
