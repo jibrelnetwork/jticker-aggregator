@@ -8,4 +8,6 @@ pytest-testmon
 asynctest
 
 pylama
+eradicate
+
 mypy
