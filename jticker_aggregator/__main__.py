@@ -5,7 +5,7 @@ import sentry_sdk
 
 from .consumer import Consumer
 from .series import SeriesStorage
-from .metadata import Metadata
+from .metadata import Metadata, TradingPairNotExist
 from .logging import _configure_logging
 
 from .settings import (
@@ -65,10 +65,8 @@ async def consume():
                 )
                 measurement = await storage.get_measurement(trading_pair)
                 await storage.store_candle(measurement, candle)
-            except:  # noqa
-                logger.exception(
-                    "Exception happen while consuming candles from Kafka %s", candle
-                )
+            except TradingPairNotExist:
+                logger.debug("Skip candle because trading pair doesn't exist")
     except:  # noqa
         sentry_sdk.capture_exception()
         logger.exception("Exit on unhandled exception")
