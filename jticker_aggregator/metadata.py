@@ -104,30 +104,6 @@ class Metadata:
                     symbol, exchange)
         raise TradingPairNotExist()
 
-    async def create_trading_pair(self, exchange, symbol, measurement=None):
-        """Create and store trading pair in metadata service.
-
-        TODO: add assets arguments for cases when we know somehow the assets
-            related to this trading pair
-
-        :param exchange:
-        :param symbol:
-        :param measurement:
-        :return:
-        """
-        url = urljoin(self.service_url, '/v1/trading_pairs/')
-        data = {
-            'exchange': exchange,
-            'symbol': symbol,
-        }
-
-        resp_data = await self._post(url, json=data)
-        logger.info("Create trading pair response %s", resp_data)
-        resp_data['exchange'] = resp_data['exchange']['slug']
-        trading_pair = self._load_pair(resp_data)
-        logger.info('New trading pair created %s', trading_pair)
-        return trading_pair
-
     async def _load_trading_pairs(self):
         """Load trading pairs into memory.
 
