@@ -11,6 +11,10 @@ from .settings import HTTP_USER_AGENT
 logger = logging.getLogger(__name__)
 
 
+class TradingPairNotExist(Exception):
+    pass
+
+
 class TradingPair:
 
     """Trading pair (aggregator).
@@ -96,33 +100,9 @@ class Metadata:
 
         if symbol in self._trading_pair_by_symbol[exchange]:
             return self._trading_pair_by_symbol[exchange][symbol]
-        logger.info("No symbol %s with exchange %s found, will be created",
+        logger.debug("No symbol %s with exchange %s found",
                     symbol, exchange)
-        return await self.create_trading_pair(exchange, symbol)
-
-    async def create_trading_pair(self, exchange, symbol, measurement=None):
-        """Create and store trading pair in metadata service.
-
-        TODO: add assets arguments for cases when we know somehow the assets
-            related to this trading pair
-
-        :param exchange:
-        :param symbol:
-        :param measurement:
-        :return:
-        """
-        url = urljoin(self.service_url, '/v1/trading_pairs/')
-        data = {
-            'exchange': exchange,
-            'symbol': symbol,
-        }
-
-        resp_data = await self._post(url, json=data)
-        logger.info("Create trading pair response %s", resp_data)
-        resp_data['exchange'] = resp_data['exchange']['slug']
-        trading_pair = self._load_pair(resp_data)
-        logger.info('New trading pair created %s', trading_pair)
-        return trading_pair
+        raise TradingPairNotExist()
 
     async def _load_trading_pairs(self):
         """Load trading pairs into memory.

@@ -22,27 +22,28 @@ def metadata_mock():
                 },
                 "base_asset": None,
                 "quote_asset": None,
+            },
+            {
+                "id": 2,
+                "symbol": "BTCUSD",
+                "exchange": {
+                    "id": 1,
+                    "name": "Binance",
+                    "slug": "binance"
+                },
+                "base_asset": {
+                    "symbol": "BTC"
+                },
+                "quote_asset": {
+                    "symbol": "USD"
+                }
             }
         ]
     }
 
-    example_create_response = {
-        'id': 2,
-        'exchange': {
-            "id": 1,
-            "name": "Binance",
-            "slug": "binance"
-        },
-        'symbol': 'BTCUSD_NOT_EXIST',
-        'base_asset': None,
-        'quote_asset': None,
-    }
-
     with mock.patch('jticker_aggregator.metadata.Metadata._get',
                     return_value=example_pair_list_response):
-        with mock.patch('jticker_aggregator.metadata.Metadata._post',
-                        return_value=example_create_response):
-            yield Metadata()
+        yield Metadata()
 
 
 @pytest.mark.asyncio
@@ -50,9 +51,3 @@ async def test_get_trading_pair():
     with metadata_mock() as metadata:
         pair = await metadata.get_trading_pair('binance', 'BTCUSD')
         repr(pair)
-
-
-@pytest.mark.asyncio
-async def test_get_new_trading_pair():
-    with metadata_mock() as metadata:
-        await metadata.get_trading_pair('binance', 'BTCUSD_NOT_EXIST')
