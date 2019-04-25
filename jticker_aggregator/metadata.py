@@ -101,7 +101,7 @@ class Metadata:
         if symbol in self._trading_pair_by_symbol[exchange]:
             return self._trading_pair_by_symbol[exchange][symbol]
         logger.debug("No symbol %s with exchange %s found",
-                    symbol, exchange)
+                     symbol, exchange)
         raise TradingPairNotExist()
 
     async def _load_trading_pairs(self):

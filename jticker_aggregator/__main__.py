@@ -4,7 +4,7 @@ import asyncio
 import sentry_sdk
 
 from .consumer import Consumer
-from .series import SeriesStorage
+from .series import SeriesStorage, SeriesStorageSet
 from .metadata import Metadata, TradingPairNotExist
 from .logging import _configure_logging
 
@@ -32,29 +32,39 @@ if SENTRY_DSN:
     with open('version.txt', 'r') as fp:
         sentry_sdk.init(SENTRY_DSN, release=fp.read().strip())
 
+
 metadata = Metadata(service_url=METADATA_URL)
-storage = SeriesStorage(
-    host=INFLUX_HOST,
-    db_name=INFLUX_DB,
-    port=INFLUX_PORT,
-    ssl=INFLUX_SSL,
-    unix_socket=INFLUX_UNIX_SOCKET,
-    username=INFLUX_USERNAME,
-    password=INFLUX_PASSWORD
-)
 
 
 async def consume():
+    _configure_logging(LOG_LEVEL)
+
+    influx_instances = []
+
+    for host in INFLUX_HOST.split(','):
+        influx_instances.append(SeriesStorage(
+            host=host,
+            db_name=INFLUX_DB,
+            port=INFLUX_PORT,
+            ssl=INFLUX_SSL,
+            unix_socket=INFLUX_UNIX_SOCKET,
+            username=INFLUX_USERNAME,
+            password=INFLUX_PASSWORD,
+            loop=loop
+        ))
+
+    storage = SeriesStorageSet(influx_instances)
+
+    await storage.load_measurements_map()
+    await storage.start()
+
     try:
-        _configure_logging(LOG_LEVEL)
 
         consumer = Consumer(
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             group_id="aggregator",
             loop=loop,
         )
-
-        await storage.load_measurements_map()
 
         await consumer.start()
 
@@ -63,8 +73,7 @@ async def consume():
                 trading_pair = await metadata.get_trading_pair(
                     exchange=candle.exchange, symbol=candle.symbol
                 )
-                measurement = await storage.get_measurement(trading_pair)
-                await storage.store_candle(measurement, candle)
+                await storage.store_candle(trading_pair, candle)
             except TradingPairNotExist:
                 logger.debug("Skip candle because trading pair doesn't exist")
     except:  # noqa
