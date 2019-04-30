@@ -51,6 +51,7 @@ async def consume():
         loop=loop,
     )
 
+    try:
         await storage.load_measurements_map()
 
         await consumer.start()
