@@ -5,7 +5,7 @@ import sentry_sdk
 
 from .consumer import Consumer
 from .series import SeriesStorage
-from .metadata import TradingPair
+from .trading_pair import TradingPair
 from .logging import _configure_logging
 
 from .settings import (
