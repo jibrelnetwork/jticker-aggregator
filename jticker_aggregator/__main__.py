@@ -4,7 +4,8 @@ import asyncio
 import sentry_sdk
 
 from .consumer import Consumer
-from .series import SeriesStorage
+
+from .series import SeriesStorageSet
 from .trading_pair import TradingPair
 from .logging import _configure_logging
 
@@ -31,19 +32,27 @@ if SENTRY_DSN:
     with open('version.txt', 'r') as fp:
         sentry_sdk.init(SENTRY_DSN, release=fp.read().strip())
 
-storage = SeriesStorage(
-    host=INFLUX_HOST,
-    db_name=INFLUX_DB,
-    port=INFLUX_PORT,
-    ssl=INFLUX_SSL,
-    unix_socket=INFLUX_UNIX_SOCKET,
-    username=INFLUX_USERNAME,
-    password=INFLUX_PASSWORD
-)
-
-
 async def consume():
     _configure_logging(LOG_LEVEL)
+
+    influx_instances = []
+
+    for host in INFLUX_HOST.split(','):
+        influx_instances.append(SeriesStorage(
+            host=host,
+            db_name=INFLUX_DB,
+            port=INFLUX_PORT,
+            ssl=INFLUX_SSL,
+            unix_socket=INFLUX_UNIX_SOCKET,
+            username=INFLUX_USERNAME,
+            password=INFLUX_PASSWORD,
+            loop=loop
+        ))
+
+    storage = SeriesStorageSet(influx_instances)
+
+    await storage.load_measurements_map()
+    await storage.start()
 
     consumer = Consumer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
