@@ -13,49 +13,7 @@ from .trading_pair import TradingPair
 logger = logging.getLogger(__name__)
 
 
-class CandleConsumer(AIOKafkaConsumer):
-
-    """Consume assets and trading pairs metadata
-    """
-
-    async def __anext__(self):
-        """Receive message, parse candle and yield it.
-
-        :return:
-        """
-        while True:
-            msg = await super().__anext__()
-            data = json.loads(msg.value)
-            msg_type = data.pop('type', 'candle')
-            logger.debug('Msg received from Kafka (%s): %s', msg_type, msg)
-            if msg_type == 'candle':
-                try:
-                    return self.parse_candle(msg.topic, data)
-                except:  # noqa
-                    logger.exception("Can't parse candle from message %s", msg)
-            else:
-                logger.error('Unhandled message type %s in %s Kafka topic: %s',
-                             msg_type, msg.topic, data)
-
-    def parse_candle(self, topic, data) -> Candle:
-        """Create candle from Kafka message.
-
-        :param topic: message origin topic
-        :param data: message data
-        :return:
-        """
-
-        return Candle(
-            exchange=None,
-            symbol=None,
-            # FIXME: no interval in assets metadata
-            interval=60,
-            timestamp=data.pop('time'),
-            **data
-        )
-
-
-class Consumer(CandleConsumer):
+class Consumer(AIOKafkaConsumer):
 
     """Candles consumer.
 
@@ -114,6 +72,25 @@ class Consumer(CandleConsumer):
                 self.subscribe(topics=list(self._topic_map.keys()))
         except:  # noqa
             logger.exception("Unhandled exception while subscribe")
+
+    async def __anext__(self):
+        """Receive message, parse candle and yield it.
+
+        :return:
+        """
+        while True:
+            msg = await super().__anext__()
+            data = json.loads(msg.value)
+            msg_type = data.pop('type', 'candle')
+            logger.debug('Msg received from Kafka (%s): %s', msg_type, msg)
+            if msg_type == 'candle':
+                try:
+                    return self.parse_candle(msg.topic, data)
+                except:  # noqa
+                    logger.exception("Can't parse candle from message %s", msg)
+            else:
+                logger.error('Unhandled message type %s in %s Kafka topic: %s',
+                             msg_type, msg.topic, data)
 
     def parse_candle(self, topic, data) -> Candle:
         """Create candle from Kafka message.
