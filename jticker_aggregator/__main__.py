@@ -4,8 +4,9 @@ import asyncio
 import sentry_sdk
 
 from .consumer import Consumer
-from .series import SeriesStorage, SeriesStorageSet
-from .metadata import Metadata, TradingPairNotExist
+
+from .series import SeriesStorageSet
+from .trading_pair import TradingPair
 from .logging import _configure_logging
 
 from .settings import (
@@ -18,7 +19,6 @@ from .settings import (
     INFLUX_UNIX_SOCKET,
     INFLUX_SSL,
     INFLUX_DB,
-    METADATA_URL,
     LOG_LEVEL,
 )
 
@@ -31,10 +31,6 @@ loop = asyncio.get_event_loop()
 if SENTRY_DSN:
     with open('version.txt', 'r') as fp:
         sentry_sdk.init(SENTRY_DSN, release=fp.read().strip())
-
-
-metadata = Metadata(service_url=METADATA_URL)
-
 
 async def consume():
     _configure_logging(LOG_LEVEL)
@@ -58,24 +54,22 @@ async def consume():
     await storage.load_measurements_map()
     await storage.start()
 
-    try:
+    consumer = Consumer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        group_id="aggregator",
+        loop=loop,
+    )
 
-        consumer = Consumer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            group_id="aggregator",
-            loop=loop,
-        )
+    try:
+        await storage.load_measurements_map()
 
         await consumer.start()
 
         async for candle in consumer:
-            try:
-                trading_pair = await metadata.get_trading_pair(
-                    exchange=candle.exchange, symbol=candle.symbol
-                )
-                await storage.store_candle(trading_pair, candle)
-            except TradingPairNotExist:
-                logger.debug("Skip candle because trading pair doesn't exist")
+            trading_pair = TradingPair(exchange=candle.exchange,
+                                       symbol=candle.symbol)
+            measurement = await storage.get_measurement(trading_pair)
+            await storage.store_candle(measurement, candle)
     except:  # noqa
         sentry_sdk.capture_exception()
         logger.exception("Exit on unhandled exception")

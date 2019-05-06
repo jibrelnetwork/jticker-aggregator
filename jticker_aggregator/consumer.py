@@ -103,7 +103,6 @@ class Consumer(CandleConsumer):
                     data = json.loads(msg.value)
                     topic = data.get('topic')
                     if topic:
-                        logger.debug("Topic found: %s", topic)
                         available_topics.append(topic)
                         self._topic_map[topic] = data
                     else:
@@ -115,6 +114,7 @@ class Consumer(CandleConsumer):
 
         logger.info("Topics loading complete. %i topics found.",
                     len(available_topics))
+        logger.debug('Available topics: %s', available_topics)
         return available_topics
 
     def parse_candle(self, topic, data) -> Candle:
