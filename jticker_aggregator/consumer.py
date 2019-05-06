@@ -4,15 +4,13 @@ import logging
 from typing import Dict
 
 from aiokafka import AIOKafkaConsumer
-from async_timeout import timeout
 
+from .topic_mapping import TopicMappingConsumer
 from .candle import Candle
+from .trading_pair import TradingPair
 
 
 logger = logging.getLogger(__name__)
-
-
-ASSETS_TOPIC = 'assets_metadata'
 
 
 class CandleConsumer(AIOKafkaConsumer):
@@ -64,18 +62,25 @@ class Consumer(CandleConsumer):
     Wrap kafka consumer: parse candles from received messages while iterating.
     """
 
-    #: map topic name to trading pair metadata received from ASSETS_TOPIC
-    _topic_map: Dict[str, Dict]
+    #: mapper used to gather all available topics
+    _topic_mapping: TopicMappingConsumer
+
+    #: map topic name to TradingPair
+    _topic_map: Dict[str, TradingPair]
+    #: reverse map (TradingPair -> topic name)
+    _reverse_topic_map: Dict[TradingPair, str]
+
+    _subscribe_task: asyncio.Task
 
     def __init__(self, *topics, **kwargs):
         """Candle consumer CTOR.
-
-        :param topics: topics to consume
-        :param kwargs: AIOKafkaConsumer kwargs
         """
-        logger.debug("Subscribe to topics: %s", topics)
-        self._topic_map = {}
         super().__init__(*topics, **kwargs)
+        kwargs['group_id'] = None
+        self._topic_mapping = TopicMappingConsumer(**kwargs)
+
+        self._topic_map = {}
+        self._reverse_topic_map = {}
 
     async def start(self):
         """Start consumer.
@@ -84,38 +89,31 @@ class Consumer(CandleConsumer):
 
         :return:
         """
-        self.subscribe(await self.available_topics())
-
-    async def available_topics(self):
-        self.subscribe(topics=[ASSETS_TOPIC])
-
+        await self._topic_mapping.start()
         await super().start()
 
-        available_topics = []
+        loop = asyncio.get_event_loop()
+        self._subscribe_task = loop.create_task(self.subscribe_task())
 
-        await self.seek_to_beginning()
-
-        while True:
-            try:
-                # TODO: get max offset for partition and read messages before
-                async with timeout(1.0):
-                    msg = await self.getone()
-                    data = json.loads(msg.value)
-                    topic = data.get('topic')
-                    if topic:
-                        available_topics.append(topic)
-                        self._topic_map[topic] = data
-                    else:
-                        logger.error("No kafka topic found: %s", data)
-            except asyncio.TimeoutError:
-                # all published assets received, break loop
-                logger.debug("All published trading pairs loaded.")
-                break
-
-        logger.info("Topics loading complete. %i topics found.",
-                    len(available_topics))
-        logger.debug('Available topics: %s', available_topics)
-        return available_topics
+    async def subscribe_task(self):
+        """Subscribe topics as they appearing in mapping.
+        """
+        try:
+            async for trading_pair in self._topic_mapping.available_trading_pairs():
+                topic = trading_pair.topic
+                logger.debug("New mapping item received for %s", trading_pair)
+                if self._reverse_topic_map.get(trading_pair):
+                    logger.debug("Mapping for %s already exist, replacing...",
+                                 trading_pair)
+                    old_topic = self._reverse_topic_map[trading_pair]
+                    del self._topic_map[old_topic]
+                self._topic_map[topic] = trading_pair
+                self._reverse_topic_map[trading_pair] = topic
+                # TODO: there is very high frequency of calls on startup
+                logger.debug("New subscription list: %s", self._topic_map.keys())
+                self.subscribe(topics=list(self._topic_map.keys()))
+        except:  # noqa
+            logger.exception("Unhandled exception while subscribe")
 
     def parse_candle(self, topic, data) -> Candle:
         """Create candle from Kafka message.
@@ -124,13 +122,16 @@ class Consumer(CandleConsumer):
         :param data: message data
         :return:
         """
-        spec = self._topic_map.get(topic, {})
+        spec = self._topic_map.get(topic)
+
+        if spec is None:
+            raise Exception("No topic %s in mapping" % topic)
 
         return Candle(
-            exchange=spec['exchange'],
-            symbol=spec['symbol'],
+            exchange=spec.exchange,
+            symbol=spec.symbol,
             # FIXME: no interval in assets metadata
-            interval=int(spec.get('interval', 60)),
+            interval=60,
             timestamp=data.pop('time'),
             **data
         )
