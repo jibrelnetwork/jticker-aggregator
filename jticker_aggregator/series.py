@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from aiohttp import ClientError
 from aioinflux import InfluxDBClient
 
-from .metadata import TradingPair
+from .trading_pair import TradingPair
 from .candle import Candle
 
 
