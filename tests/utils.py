@@ -33,6 +33,6 @@ async def fill_kafka(payload):
                 topic=topic_name,
                 key=key,
                 value=json.dumps(value).encode()
-        )
+            )
 
     await producer.stop()

@@ -32,6 +32,7 @@ if SENTRY_DSN:
     with open('version.txt', 'r') as fp:
         sentry_sdk.init(SENTRY_DSN, release=fp.read().strip())
 
+
 async def consume():
     _configure_logging(LOG_LEVEL)
 
