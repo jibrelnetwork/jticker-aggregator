@@ -53,6 +53,13 @@ class Consumer(AIOKafkaConsumer):
         loop = asyncio.get_event_loop()
         self._subscribe_task = loop.create_task(self.subscribe_task())
 
+    async def stop(self):
+        if hasattr(self, '_subscribe_task'):
+            self._subscribe_task.cancel()
+            await self._subscribe_task
+        await self._topic_mapping.stop()
+        await super().stop()
+
     async def subscribe_task(self):
         """Subscribe topics as they appearing in mapping.
         """
@@ -70,15 +77,15 @@ class Consumer(AIOKafkaConsumer):
                 # TODO: there is very high frequency of calls on startup
                 logger.debug("New subscription list: %s", self._topic_map.keys())
                 self.subscribe(topics=list(self._topic_map.keys()))
-        except:  # noqa
+        except asyncio.CancelledError:
+            pass
+        except Exception:
             logger.exception("Unhandled exception while subscribe")
 
     async def __anext__(self):
         """Receive message, parse candle and yield it.
-
-        :return:
         """
-        while True:
+        while True:  # read next message if parsing of current one failed
             msg = await super().__anext__()
             data = json.loads(msg.value)
             msg_type = data.pop('type', 'candle')
@@ -107,7 +114,7 @@ class Consumer(AIOKafkaConsumer):
         return Candle(
             exchange=spec.exchange,
             symbol=spec.symbol,
-            # FIXME: no interval in assets metadata
+            # FIXME: no interval in trading pair
             interval=60,
             timestamp=data.pop('time'),
             **data

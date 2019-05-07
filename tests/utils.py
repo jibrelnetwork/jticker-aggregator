@@ -8,7 +8,9 @@ from jticker_aggregator.settings import KAFKA_BOOTSTRAP_SERVERS
 
 async def fill_kafka(payload):
     """Fill Kafka with data.
+
     Payload example:
+
         {
             "<TOPIC_NAME>": {
                 "MSG-1-KEY": {
