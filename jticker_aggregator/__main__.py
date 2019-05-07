@@ -68,8 +68,7 @@ async def consume():
         async for candle in consumer:
             trading_pair = TradingPair(exchange=candle.exchange,
                                        symbol=candle.symbol)
-            measurement = await storage.get_measurement(trading_pair)
-            await storage.store_candle(measurement, candle)
+            await storage.store_candle(trading_pair, candle)
     except:  # noqa
         sentry_sdk.capture_exception()
         logger.exception("Exit on unhandled exception")

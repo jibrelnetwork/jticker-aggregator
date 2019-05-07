@@ -102,9 +102,9 @@ class SeriesStorage:
             }
         }
         try:
-            self._candles_buffer.put_nowait(influx_record)
+            await asyncio.wait_for(self._candles_buffer.put(influx_record), 10)
             logger.debug("Candle added to buffer")
-        except asyncio.QueueFull:
+        except asyncio.TimeoutError:
             logger.warning("Candles buffer is full, can't store candle")
 
     async def store_candles_coro(self):
