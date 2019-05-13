@@ -25,4 +25,4 @@ async def test_candle_written():
         storage._measurement_mapping['binance:BTCUSD'] = 'test_measurement'
         storage._measurements_loaded = True
         storage.client.write = mock.CoroutineMock()
-        await storage.store_candle(trading_pair, candle)
+        await storage.store_candle(candle)

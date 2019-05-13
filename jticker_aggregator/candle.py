@@ -1,5 +1,7 @@
 from typing import Optional
 
+from .trading_pair import TradingPair
+
 
 class Candle:
 
@@ -29,8 +31,8 @@ class Candle:
     symbol: Optional[str]
     #: candle interval in seconds
     interval: int
-    #: candle close time (unix timestamp int part)
-    timestamp: int
+    #: candle close time (iso datetime string)
+    timestamp: str
 
     #: open price
     open: float
@@ -49,7 +51,7 @@ class Candle:
     version: int
 
     def __init__(self, exchange: Optional[str], symbol: Optional[str],
-                 interval: int, timestamp: int,
+                 interval: int, timestamp: str,
                  open: float, high: float, low: float, close: float,
                  base_volume=None, quote_volume=None,
                  version=1):
@@ -64,3 +66,7 @@ class Candle:
         self.base_volume = base_volume
         self.quote_volume = quote_volume
         self.version = version
+
+    @property
+    def trading_pair(self):
+        return TradingPair.get(self.exchange, self.symbol)

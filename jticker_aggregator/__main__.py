@@ -6,7 +6,6 @@ import sentry_sdk
 from .consumer import Consumer
 
 from .series import SeriesStorage, SeriesStorageSet
-from .trading_pair import TradingPair
 from .logging import _configure_logging
 
 from .settings import (
@@ -67,9 +66,7 @@ async def consume():
         await consumer.start()
 
         async for candle in consumer:
-            trading_pair = TradingPair(exchange=candle.exchange,
-                                       symbol=candle.symbol)
-            await storage.store_candle(trading_pair, candle)
+            await storage.store_candle(candle)
     except:  # noqa
         sentry_sdk.capture_exception()
         logger.exception("Exit on unhandled exception")

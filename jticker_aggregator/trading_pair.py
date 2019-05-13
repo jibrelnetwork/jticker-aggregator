@@ -1,8 +1,5 @@
-import logging
+from functools import lru_cache
 from typing import Optional
-
-
-logger = logging.getLogger(__name__)
 
 
 class TradingPair:
@@ -30,6 +27,11 @@ class TradingPair:
         self.base_asset = base_asset
         self.quote_asset = quote_asset
         self.topic = topic
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def get(exchange, symbol):
+        return TradingPair(exchange, symbol)
 
     def __repr__(self):
         return f"<TradingPair {self.exchange}:{self.symbol}>"
