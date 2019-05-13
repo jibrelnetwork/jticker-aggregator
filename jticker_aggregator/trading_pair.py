@@ -15,10 +15,9 @@ class TradingPair:
     symbol: str
     base_asset: int
     quote_asset: int
-    measurement: Optional[str]
     topic: Optional[str]
 
-    def __init__(self, exchange, symbol, base_asset=None, quote_asset=None):
+    def __init__(self, exchange, symbol, base_asset=None, quote_asset=None, topic=None):
         """Trading pair CTOR.
 
         :param exchange: slug of exchange where the trading pair is being traded
@@ -30,6 +29,7 @@ class TradingPair:
         self.symbol = symbol
         self.base_asset = base_asset
         self.quote_asset = quote_asset
+        self.topic = topic
 
     def __repr__(self):
         return f"<TradingPair {self.exchange}:{self.symbol}>"

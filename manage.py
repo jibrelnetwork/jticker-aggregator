@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import click
 
 from jticker_aggregator.checker import RangeCollection
-from jticker_aggregator.consumer import CandleConsumer
+from jticker_aggregator.consumer import Consumer
 
 
 @click.group()
@@ -55,8 +55,8 @@ async def fill_collection(consumer, collection):
 @click.argument('topic')
 def check(topic):
     loop = asyncio.get_event_loop()
-    consumer = CandleConsumer(topic, loop=loop, bootstrap_servers='kafka:9092',
-                              auto_offset_reset='earliest')
+    consumer = Consumer(topic, loop=loop, bootstrap_servers='kafka:9092',
+                        auto_offset_reset='earliest')
     collection = RangeCollection()
     loop.run_until_complete(fill_collection(consumer, collection))
 
