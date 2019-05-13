@@ -7,6 +7,7 @@ from .consumer import Consumer
 
 from .series import SeriesStorage, SeriesStorageSet
 from .logging import _configure_logging
+from .stats import AggregatorStats
 
 from .settings import (
     SENTRY_DSN,
@@ -35,6 +36,9 @@ if SENTRY_DSN:
 async def consume():
     _configure_logging(LOG_LEVEL)
 
+    stats = AggregatorStats()
+    await stats.start()
+
     influx_instances = []
 
     for host in INFLUX_HOST.split(','):
@@ -46,7 +50,8 @@ async def consume():
             unix_socket=INFLUX_UNIX_SOCKET,
             username=INFLUX_USERNAME,
             password=INFLUX_PASSWORD,
-            loop=loop
+            loop=loop,
+            stats=stats,
         ))
 
     storage = SeriesStorageSet(influx_instances)

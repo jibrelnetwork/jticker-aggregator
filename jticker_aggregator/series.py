@@ -7,6 +7,7 @@ from aiohttp import ClientError
 from aioinflux import InfluxDBClient
 
 from .trading_pair import TradingPair
+from .stats import AggregatorStats
 from .candle import Candle
 
 
@@ -50,6 +51,8 @@ class SeriesStorage:
     #: store candle task
     _store_candles_task: asyncio.Task
 
+    _stats: AggregatorStats
+
     def __init__(self,
                  host: str = "localhost",
                  port: int = 8086,
@@ -59,7 +62,9 @@ class SeriesStorage:
                  username: Optional[str] = None,
                  password: Optional[str] = None,
                  loop=None,
+                 stats: AggregatorStats = None,
                  **kwargs):
+        self._stats = stats
         self.client = InfluxDBClient(
             host=host,
             port=port,
@@ -117,6 +122,8 @@ class SeriesStorage:
                 logger.debug("Write candle: %s",
                              json.dumps(influx_record, indent=4))  # TODO: lazy dumps
                 await self.client.write(influx_record)
+                if hasattr(self, '_stats'):
+                    self._stats.candle_stored(candle, self.client.host)
                 logger.debug('Written to influx')
                 self._candles_buffer.task_done()
             except asyncio.CancelledError:
