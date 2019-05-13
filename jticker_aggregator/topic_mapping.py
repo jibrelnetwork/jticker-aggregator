@@ -35,7 +35,7 @@ class TopicMappingConsumer(AIOKafkaConsumer):
 
     def __init__(self, *args, mapping_topic=ASSETS_TOPIC, **kwargs):
         self.mapping_topic = mapping_topic
-
+        kwargs['auto_offset_reset'] = 'earliest'
         super().__init__(*args, **kwargs)
 
     async def available_trading_pairs(self) -> AsyncGenerator[TradingPair, None]:

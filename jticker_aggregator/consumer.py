@@ -33,6 +33,7 @@ class Consumer(AIOKafkaConsumer):
     def __init__(self, *topics, **kwargs):
         """Candle consumer CTOR.
         """
+        kwargs['auto_offset_reset'] = 'earliest'
         super().__init__(*topics, **kwargs)
         kwargs['group_id'] = None
         self._topic_mapping = TopicMappingConsumer(**kwargs)
