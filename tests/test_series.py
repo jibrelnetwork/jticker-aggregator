@@ -1,9 +1,7 @@
-import time
-
 import pytest
 from asynctest import mock
+from datetime import datetime
 
-from jticker_aggregator.trading_pair import TradingPair
 from jticker_aggregator.series import SeriesStorage
 from jticker_aggregator.candle import Candle
 
@@ -12,7 +10,7 @@ from jticker_aggregator.candle import Candle
 async def test_candle_written():
     candle = Candle(
         'binance', 'BTCUSD', 60,
-        timestamp=int(time.time()),
+        timestamp=datetime.now().isoformat(),
         open=1.1,
         high=2.1,
         low=.5,
@@ -20,9 +18,9 @@ async def test_candle_written():
         base_volume=1,
         quote_volume=2
     )
-    trading_pair = TradingPair('binance', 'BTCUSD', 'BTC', 'USD')
+
     async with SeriesStorage() as storage:
         storage._measurement_mapping['binance:BTCUSD'] = 'test_measurement'
         storage._measurements_loaded = True
         storage.client.write = mock.CoroutineMock()
-        await storage.store_candle(trading_pair, candle)
+        await storage.store_candle(candle)

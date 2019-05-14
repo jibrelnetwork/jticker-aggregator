@@ -6,8 +6,8 @@ import sentry_sdk
 from .consumer import Consumer
 
 from .series import SeriesStorage, SeriesStorageSet
-from .trading_pair import TradingPair
 from .logging import _configure_logging
+from .stats import AggregatorStats
 
 from .settings import (
     SENTRY_DSN,
@@ -36,6 +36,9 @@ if SENTRY_DSN:
 async def consume():
     _configure_logging(LOG_LEVEL)
 
+    stats = AggregatorStats()
+    await stats.start()
+
     influx_instances = []
 
     for host in INFLUX_HOST.split(','):
@@ -47,7 +50,8 @@ async def consume():
             unix_socket=INFLUX_UNIX_SOCKET,
             username=INFLUX_USERNAME,
             password=INFLUX_PASSWORD,
-            loop=loop
+            loop=loop,
+            stats=stats,
         ))
 
     storage = SeriesStorageSet(influx_instances)
@@ -67,9 +71,7 @@ async def consume():
         await consumer.start()
 
         async for candle in consumer:
-            trading_pair = TradingPair(exchange=candle.exchange,
-                                       symbol=candle.symbol)
-            await storage.store_candle(trading_pair, candle)
+            await storage.store_candle(candle)
     except:  # noqa
         sentry_sdk.capture_exception()
         logger.exception("Exit on unhandled exception")

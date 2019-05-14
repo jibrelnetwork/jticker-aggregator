@@ -7,6 +7,7 @@ from aiohttp import ClientError
 from aioinflux import InfluxDBClient
 
 from .trading_pair import TradingPair
+from .stats import AggregatorStats
 from .candle import Candle
 
 
@@ -50,6 +51,8 @@ class SeriesStorage:
     #: store candle task
     _store_candles_task: asyncio.Task
 
+    _stats: AggregatorStats
+
     def __init__(self,
                  host: str = "localhost",
                  port: int = 8086,
@@ -59,7 +62,9 @@ class SeriesStorage:
                  username: Optional[str] = None,
                  password: Optional[str] = None,
                  loop=None,
+                 stats: AggregatorStats = None,
                  **kwargs):
+        self._stats = stats
         self.client = InfluxDBClient(
             host=host,
             port=port,
@@ -77,32 +82,16 @@ class SeriesStorage:
     async def start(self):
         self._store_candles_task = self.loop.create_task(self.store_candles_coro())
 
-    async def store_candle(self, trading_pair: TradingPair, candle: Candle):
+    async def store_candle(self, candle: Candle):
         """Store candle in influx measurement.
 
         :param measurement: measurement name
         :param candle: Candle instance
         :return:
         """
-        measurement = await self.get_measurement(trading_pair)
-        influx_record = {
-            "measurement": measurement,
-            "time": candle.timestamp,
-            "tags": {
-                "interval": candle.interval,
-                "version": 0
-            },
-            "fields": {
-                'open': float(candle.open),
-                'high': float(candle.high),
-                'low': float(candle.low),
-                'close': float(candle.close),
-                'base_volume': to_float(candle.base_volume),
-                'quote_volume': to_float(candle.quote_volume),
-            }
-        }
+
         try:
-            await asyncio.wait_for(self._candles_buffer.put(influx_record), 10)
+            await asyncio.wait_for(self._candles_buffer.put(candle), 10)
             logger.debug("Candle added to buffer")
         except asyncio.TimeoutError:
             logger.warning("Candles buffer is full, can't store candle")
@@ -112,10 +101,29 @@ class SeriesStorage:
         """
         while True:
             try:
-                influx_record = await self._candles_buffer.get()
+                candle = await self._candles_buffer.get()
+                measurement = await self.get_measurement(candle.trading_pair)
+                influx_record = {
+                    "measurement": measurement,
+                    "time": candle.timestamp,
+                    "tags": {
+                        "interval": candle.interval,
+                        "version": 0
+                    },
+                    "fields": {
+                        'open': float(candle.open),
+                        'high': float(candle.high),
+                        'low': float(candle.low),
+                        'close': float(candle.close),
+                        'base_volume': to_float(candle.base_volume),
+                        'quote_volume': to_float(candle.quote_volume),
+                    }
+                }
                 logger.debug("Write candle: %s",
                              json.dumps(influx_record, indent=4))  # TODO: lazy dumps
                 await self.client.write(influx_record)
+                if hasattr(self, '_stats'):
+                    self._stats.candle_stored(candle, self.client.host)
                 logger.debug('Written to influx')
                 self._candles_buffer.task_done()
             except asyncio.CancelledError:
@@ -206,9 +214,9 @@ class SeriesStorageSet:
     async def load_measurements_map(self):
         await self._gather_childs('load_measurements_map')
 
-    async def store_candle(self, trading_pair: TradingPair, candle: Candle):
+    async def store_candle(self, candle: Candle):
         await self._gather_childs(
-            'store_candle', trading_pair=trading_pair, candle=candle
+            'store_candle', candle=candle
         )
 
     async def start(self):
