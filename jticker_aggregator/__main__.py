@@ -4,9 +4,10 @@ import asyncio
 import sentry_sdk
 
 from .consumer import Consumer
-from .series import SeriesStorage
-from .metadata import Metadata
+
+from .series import SeriesStorage, SeriesStorageSet
 from .logging import _configure_logging
+from .stats import AggregatorStats
 
 from .settings import (
     SENTRY_DSN,
@@ -18,7 +19,6 @@ from .settings import (
     INFLUX_UNIX_SOCKET,
     INFLUX_SSL,
     INFLUX_DB,
-    METADATA_URL,
     LOG_LEVEL,
 )
 
@@ -32,43 +32,46 @@ if SENTRY_DSN:
     with open('version.txt', 'r') as fp:
         sentry_sdk.init(SENTRY_DSN, release=fp.read().strip())
 
-metadata = Metadata(service_url=METADATA_URL)
-storage = SeriesStorage(
-    host=INFLUX_HOST,
-    db_name=INFLUX_DB,
-    port=INFLUX_PORT,
-    ssl=INFLUX_SSL,
-    unix_socket=INFLUX_UNIX_SOCKET,
-    username=INFLUX_USERNAME,
-    password=INFLUX_PASSWORD
-)
-
 
 async def consume():
-    try:
-        _configure_logging(LOG_LEVEL)
+    _configure_logging(LOG_LEVEL)
 
-        consumer = Consumer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            group_id="aggregator",
+    stats = AggregatorStats()
+    await stats.start()
+
+    influx_instances = []
+
+    for host in INFLUX_HOST.split(','):
+        influx_instances.append(SeriesStorage(
+            host=host,
+            db_name=INFLUX_DB,
+            port=INFLUX_PORT,
+            ssl=INFLUX_SSL,
+            unix_socket=INFLUX_UNIX_SOCKET,
+            username=INFLUX_USERNAME,
+            password=INFLUX_PASSWORD,
             loop=loop,
-        )
+            stats=stats,
+        ))
 
+    storage = SeriesStorageSet(influx_instances)
+
+    await storage.load_measurements_map()
+    await storage.start()
+
+    consumer = Consumer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        group_id="aggregator",
+        loop=loop,
+    )
+
+    try:
         await storage.load_measurements_map()
 
         await consumer.start()
 
         async for candle in consumer:
-            try:
-                trading_pair = await metadata.get_trading_pair(
-                    exchange=candle.exchange, symbol=candle.symbol
-                )
-                measurement = await storage.get_measurement(trading_pair)
-                await storage.store_candle(measurement, candle)
-            except:  # noqa
-                logger.exception(
-                    "Exception happen while consuming candles from Kafka %s", candle
-                )
+            await storage.store_candle(candle)
     except:  # noqa
         sentry_sdk.capture_exception()
         logger.exception("Exit on unhandled exception")

@@ -1,18 +1,12 @@
 import time
-import json
 
 import pytest
-from contextlib import contextmanager
-from asynctest import mock
 
 from jticker_aggregator.consumer import Consumer
 from jticker_aggregator.candle import Candle
+from jticker_aggregator.settings import KAFKA_BOOTSTRAP_SERVERS
 
-
-class FakeKafkaMessage:
-    def __init__(self, topic, value):
-        self.topic = topic
-        self.value = json.dumps(value)
+from .utils import fill_kafka
 
 
 example_candle_data = {
@@ -23,65 +17,36 @@ example_candle_data = {
     'close': 1.1,
 }
 
-example_kafka_message = FakeKafkaMessage(
-    'binance_USDBTC_60',
-    example_candle_data
-)
-
-
-@contextmanager
-def consumer_patch(patch_message=None):
-    if patch_message is None:
-        patch_message = example_kafka_message
-
-    consumer_patch_spec = {
-        'aiokafka.consumer.consumer.AIOKafkaClient.bootstrap': {},
-        'aiokafka.consumer.consumer.AIOKafkaClient.get_random_node': {
-            'return_value': 1234,
-        },
-        'aiokafka.consumer.consumer.AIOKafkaClient._metadata_update': {
-            'return_value': True,
-        },
-        'aiokafka.consumer.consumer.AIOKafkaConsumer.__anext__': {
-            'new': mock.CoroutineMock(return_value=patch_message),
-        },
-        'jticker_aggregator.consumer.Consumer.available_topics': {
-            'return_value': ['binance_USDBTC_60']
-        }
-    }
-
-    applied_pathes = []
-    for target, spec in consumer_patch_spec.items():
-        patcher = mock.patch(target, **spec)
-        patcher.start()
-        applied_pathes.append(
-            patcher
-        )
-    yield
-    for patcher in applied_pathes:
-        patcher.stop()
-
 
 @pytest.mark.asyncio
 async def test_iteration(event_loop):
-    with consumer_patch():
-        consumer = Consumer(
-            loop=event_loop,
-            bootstrap_servers=('kafka:9092',),
-            group_id="aggregator",
-        )
-        consumer._topic_map = {
-            'binance_USDBTC_60': {
+    await fill_kafka({
+        'assets_metadata': {
+            'binance:BTCUSD': {
                 'exchange': 'binance',
-                'symbol': 'USDBTC',
-                'interval': 60
+                'symbol': 'BTCUSD',
+                'topic': 'binance_BTCUSD_60'
             }
-        }
+        },
+        'binance_BTCUSD_60': {
+            'doesnt-matter': example_candle_data
+        },
+    })
 
-        await consumer.start()
+    consumer = Consumer(
+        loop=event_loop,
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        auto_offset_reset='earliest'
+    )
 
-        async for candle in consumer:
-            assert isinstance(candle, Candle)
-            for field in ('open', 'high', 'low', 'close'):
-                assert getattr(candle, field) == example_candle_data[field]
-            break
+    await consumer.start()
+
+    async for candle in consumer:
+        assert isinstance(candle, Candle)
+        for field in ('open', 'high', 'low', 'close'):
+            assert getattr(candle, field) == example_candle_data[field]
+        break
+
+    await consumer.stop()
+
+    await event_loop.shutdown_asyncgens()
