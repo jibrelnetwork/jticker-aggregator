@@ -1,4 +1,3 @@
-import json
 import logging
 import asyncio
 from typing import List, Dict, Optional
@@ -51,7 +50,7 @@ class SeriesStorage:
     #: store candle task
     _store_candles_task: asyncio.Task
 
-    _stats: AggregatorStats
+    _stats: Optional[AggregatorStats]
 
     def __init__(self,
                  host: str = "localhost",
@@ -119,12 +118,9 @@ class SeriesStorage:
                         'quote_volume': to_float(candle.quote_volume),
                     }
                 }
-                logger.debug("Write candle: %s",
-                             json.dumps(influx_record, indent=4))  # TODO: lazy dumps
                 await self.client.write(influx_record)
                 if hasattr(self, '_stats'):
                     self._stats.candle_stored(candle, self.client.host)
-                logger.debug('Written to influx')
                 self._candles_buffer.task_done()
             except asyncio.CancelledError:
                 logger.debug("store_candles_coro cancelled")

@@ -26,7 +26,7 @@ class Candle:
     ]
 
     #: exchange slug
-    exchange: Optional[str]
+    exchange: str
     #: trading pair symbol
     symbol: Optional[str]
     #: candle interval in seconds
@@ -50,7 +50,7 @@ class Candle:
     #: series version
     version: int
 
-    def __init__(self, exchange: Optional[str], symbol: Optional[str],
+    def __init__(self, exchange: str, symbol: str,
                  interval: int, timestamp: str,
                  open: float, high: float, low: float, close: float,
                  base_volume=None, quote_volume=None,
