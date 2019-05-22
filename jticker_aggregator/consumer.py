@@ -82,6 +82,7 @@ class Consumer(AIOKafkaConsumer):
             pass
         except Exception:
             logger.exception("Unhandled exception while subscribe")
+            exit(1)
 
     async def __anext__(self):
         """Receive message, parse candle and yield it.
