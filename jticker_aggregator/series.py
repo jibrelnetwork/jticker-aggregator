@@ -40,6 +40,7 @@ class SeriesStorage:
         finally:
             storage.close()
     """
+    max_batch_size = 1000
 
     #: is measurements name mapping loaded from MAPPING_MEASUREMENT
     _measurements_loaded = False
@@ -76,7 +77,10 @@ class SeriesStorage:
         )
         self._measurement_mapping = {}
         self.loop = loop or asyncio.get_event_loop()
-        self._candles_buffer = asyncio.Queue(maxsize=1000, loop=self.loop)
+        self._candles_buffer = asyncio.Queue(
+            maxsize=self.max_batch_size * 2,
+            loop=self.loop
+        )
 
     async def start(self):
         self._store_candles_task = self.loop.create_task(self.store_candles_coro())
@@ -90,7 +94,7 @@ class SeriesStorage:
         """
 
         try:
-            await asyncio.wait_for(self._candles_buffer.put(candle), 10)
+            await asyncio.wait_for(self._candles_buffer.put(candle), 1)
             logger.debug("Candle added to buffer")
         except asyncio.TimeoutError:
             logger.warning("Candles buffer is full, can't store candle")
@@ -100,28 +104,38 @@ class SeriesStorage:
         """
         while True:
             try:
-                candle = await self._candles_buffer.get()
-                measurement = await self.get_measurement(candle.trading_pair)
-                influx_record = {
-                    "measurement": measurement,
-                    "time": candle.timestamp,
-                    "tags": {
-                        "interval": candle.interval,
-                        "version": 0
-                    },
-                    "fields": {
-                        'open': float(candle.open),
-                        'high': float(candle.high),
-                        'low': float(candle.low),
-                        'close': float(candle.close),
-                        'base_volume': to_float(candle.base_volume),
-                        'quote_volume': to_float(candle.quote_volume),
-                    }
-                }
-                await self.client.write(influx_record)
+                # batch candles until max batch size reached
+                batch = []
+                while len(batch) < self.max_batch_size:
+                    batch.append(await self._candles_buffer.get())
+                    self._candles_buffer.task_done()
+                    if self._candles_buffer.empty():
+                        # store single candle if no more candles available
+                        break
+
+                influx_data = []
+                for candle in batch:
+                    measurement = await self.get_measurement(candle.trading_pair)
+                    influx_data.append({
+                        "measurement": measurement,
+                        "time": candle.timestamp,
+                        "tags": {
+                            "interval": candle.interval,
+                            "version": 0
+                        },
+                        "fields": {
+                            'open': float(candle.open),
+                            'high': float(candle.high),
+                            'low': float(candle.low),
+                            'close': float(candle.close),
+                            'base_volume': to_float(candle.base_volume),
+                            'quote_volume': to_float(candle.quote_volume),
+                        }
+                    })
+                await self.client.write(influx_data)
                 if hasattr(self, '_stats'):
-                    self._stats.candle_stored(candle, self.client.host)
-                self._candles_buffer.task_done()
+                    for candle in batch:
+                        self._stats.candle_stored(candle, self.client.host)
             except asyncio.CancelledError:
                 logger.debug("store_candles_coro cancelled")
                 break
