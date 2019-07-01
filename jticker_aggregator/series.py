@@ -3,7 +3,7 @@ import asyncio
 from typing import List, Dict, Optional
 
 from aiohttp import ClientError
-from aioinflux import InfluxDBClient
+from aioinflux import InfluxDBClient, InfluxDBError
 
 from .trading_pair import TradingPair
 from .stats import AggregatorStats
@@ -139,13 +139,14 @@ class SeriesStorage:
             except asyncio.CancelledError:
                 logger.debug("store_candles_coro cancelled")
                 break
-            except ClientError:
+            except (ClientError, InfluxDBError):
                 logger.exception("Exception happen while writting to InfluxDB."
                                  "Sleep 1 sec and retry.")
                 await asyncio.sleep(1)
             except Exception:  # noqa
                 logger.exception("Unhandled exception in store_candles_coro")
-                break
+                await asyncio.sleep(10)
+                exit(1)
         logger.info("Store candle coro stopped.")
 
     async def load_measurements_map(self):
