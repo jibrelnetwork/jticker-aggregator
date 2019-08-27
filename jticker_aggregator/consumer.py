@@ -95,7 +95,7 @@ class Consumer(AIOKafkaConsumer):
             if msg_type == 'candle':
                 try:
                     return self.parse_candle(msg.topic, data)
-                except:  # noqa
+                except Exception:
                     logger.exception("Can't parse candle from message %s", msg)
             else:
                 logger.error('Unhandled message type %s in %s Kafka topic: %s',
@@ -112,12 +112,15 @@ class Consumer(AIOKafkaConsumer):
 
         if spec is None:
             raise Exception("No topic %s in mapping" % topic)
-
         return Candle(
             exchange=spec.exchange,
             symbol=spec.symbol,
-            # FIXME: no interval in trading pair
-            interval=60,
-            timestamp=data.pop('time'),
-            **data
+            interval=data.get("interval", 60),
+            timestamp=data.get("timestamp") or data.get("time"),
+            open=data["open"],
+            high=data["high"],
+            low=data["low"],
+            close=data["close"],
+            base_volume=data.get("base_volume"),
+            quote_volume=data.get("quote_volume"),
         )

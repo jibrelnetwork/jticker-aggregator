@@ -34,9 +34,9 @@ builder(
                                         image: "zookeeper"
                                 ],
                                 kafka: [
-                                        image: 'wurstmeister/kafka',
+                                        image: 'jibrelnetwork/kafka',
                                         environment: [
-                                                KAFKA_BROKER_ID: 0,
+                                                BROKERID: 0,
                                                 KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181',
                                                 KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092',
                                                 KAFKA_LISTENERS: 'PLAINTEXT://:9092',

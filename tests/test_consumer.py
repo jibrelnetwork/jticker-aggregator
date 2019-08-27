@@ -10,11 +10,12 @@ from .utils import fill_kafka
 
 
 example_candle_data = {
-    'time': time.time(),
+    'timestamp': time.time(),
     'open': 1,
     'high': 1.2,
     'low': 0.9,
     'close': 1.1,
+    'interval': 60,
 }
 
 
@@ -43,7 +44,7 @@ async def test_iteration(event_loop):
 
     async for candle in consumer:
         assert isinstance(candle, Candle)
-        for field in ('open', 'high', 'low', 'close'):
+        for field in ('open', 'high', 'low', 'close', 'interval'):
             assert getattr(candle, field) == example_candle_data[field]
         break
 
