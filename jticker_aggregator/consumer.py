@@ -117,7 +117,12 @@ class Consumer(AIOKafkaConsumer):
             exchange=spec.exchange,
             symbol=spec.symbol,
             # FIXME: no interval in trading pair
-            interval=60,
-            timestamp=data.pop('time'),
-            **data
+            interval=data["interval"],
+            timestamp=data["timestamp"],
+            open=data["open"],
+            high=data["high"],
+            low=data["low"],
+            close=data["close"],
+            base_volume=data["base_volume"],
+            quote_volume=data["quote_volume"],
         )
