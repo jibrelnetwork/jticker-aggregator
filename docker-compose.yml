@@ -24,11 +24,11 @@ services:
     environment:
       INFLUXDB_DB: jticker_tests  # create test database
   kafka-tests:
-    image: wurstmeister/kafka
+    image: jibrelnetwork/kafka
     depends_on:
       - zookeeper-tests
     environment:
-      KAFKA_BROKER_ID: 0
+      BROKERID: 0
       KAFKA_ZOOKEEPER_CONNECT: zookeeper-tests:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-tests:9092
       KAFKA_LISTENERS: PLAINTEXT://:9092
