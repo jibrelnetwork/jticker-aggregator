@@ -69,6 +69,9 @@ class TopicMappingConsumer(AIOKafkaConsumer):
             data = json.loads(message.value)
 
             trading_pair = acc_pairs[data['exchange']].get(data['symbol'])
+            if "topic" not in data:
+                logger.warning("message have no 'topic' key, ignore")
+                continue
             if not trading_pair:
                 trading_pair = TradingPair(
                     exchange=data['exchange'],
