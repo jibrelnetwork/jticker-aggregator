@@ -14,8 +14,8 @@ services:
       - './:/app'
     environment:
       INFLUX_HOST: influxdb-tests
-      KAFKA_BOOTSTRAP_SERVERS: "kafka-tests:9092"
-      METADATA_URL: "http://jassets:8000/"
+      KAFKA_BOOTSTRAP_SERVERS: 'kafka-tests:9092'
+      METADATA_URL: 'http://jassets:8000/'
     networks:
       - jassets_default
       - default
