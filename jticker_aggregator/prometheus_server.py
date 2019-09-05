@@ -4,16 +4,21 @@ from mode import Service
 from loguru import logger
 from addict import Dict
 
-from .injector import injector
+from .injector import inject, register
 
 
-@injector.register(singleton=True, name="prometheus_server")
+@register(singleton=True)
+def web_app():
+    return web.Application()
+
+
+@register(singleton=True, name="prometheus_server")
 class PrometheusMetricsServer(Service):
 
-    @injector.inject
-    def __init__(self, config: Dict):
+    @inject
+    def __init__(self, web_app: web.Application, config: Dict):
         super().__init__()
-        self.app = web.Application()
+        self.app = web_app
         self.app.router.add_route("GET", "/metrics", self._metrics)
         self.host = config.prometheus_web_host
         self.port = int(config.prometheus_web_port)
