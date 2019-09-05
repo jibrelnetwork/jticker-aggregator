@@ -1,6 +1,8 @@
 builder(
         jUnitReportsPath: 'junit-reports',
         coverageReportsPath: 'coverage-reports',
+        slackTargetNames: '#radio-jticker',
+        slackNotificationBranchFilter: '^(master|develop|(release|feature|bugfix)/[a-zA-z0-9.-]*)$',
         buildTasks: [
                 [
                         name: "Linters",
