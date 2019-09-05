@@ -38,7 +38,7 @@ def config(version: str) -> Dict:
     # parser.add_argument("--http-user-agent", default=f"jticker-aggregator/{version} {host}",
     #                     help="")
     parser.add_argument("--influx-host", default="influxdb",
-                        help="Influxdb host [default: %(default)s]")
+                        help="Influxdb hosts (comma separated) [default: %(default)s]")
     parser.add_argument("--influx-port", default="8086",
                         help="Influxdb port [default: %(default)s]")
     parser.add_argument("--influx-db", default="test",
@@ -48,6 +48,8 @@ def config(version: str) -> Dict:
     parser.add_argument("--influx-ssl", action="store_true", default=False,
                         help="Influxdb use ssl [%(default)s]")
     parser.add_argument("--influx-unix-socket", default=None,
+                        help="Influxdb unix socket [%(default)s]")
+    parser.add_argument("--influx-measurements-mapping", default="mapping",
                         help="Influxdb unix socket [%(default)s]")
     parser.add_argument("--prometheus-web-host", default="0.0.0.0",
                         help="Prometheus web server host [default: %(default)s]")

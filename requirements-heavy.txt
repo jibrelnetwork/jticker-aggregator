@@ -1,3 +1,0 @@
-# Heavy dependencies (for docker cache)
-# pandas==0.24.2  # rm warning about dataframe mode
-aiohttp==3.5.4
