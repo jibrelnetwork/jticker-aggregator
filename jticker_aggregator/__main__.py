@@ -11,7 +11,6 @@ from addict import Dict
 
 from jticker_core import configure_logging, ignore_aiohttp_ssl_eror
 
-# TODO: maybe move to jticker-core if injector is a good solution
 from .injector import inject, register
 from .aggregator import Aggregator
 from .prometheus_server import PrometheusMetricsServer
@@ -30,13 +29,11 @@ def version():
 def config(version: str) -> Dict:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sentry-dsn", default=None, help="Sentry DSN [default: %(default)s]")
-    parser.add_argument("--kafka-bootstrap-servers", default="kafka:9092",
-                        help="Comma separated kafka bootstrap servers [default: %(default)s]")
     parser.add_argument("--log-level", default="INFO",
                         help="Python logging level [default: %(default)s]")
-    # host = socket.gethostname()
-    # parser.add_argument("--http-user-agent", default=f"jticker-aggregator/{version} {host}",
-    #                     help="")
+    parser.add_argument("--stats-log-interval", default="60",
+                        help="Stats logging interval [default: %(default)s]")
+    # influx
     parser.add_argument("--influx-host", default="influxdb",
                         help="Influxdb hosts (comma separated) [default: %(default)s]")
     parser.add_argument("--influx-port", default="8086",
@@ -51,10 +48,14 @@ def config(version: str) -> Dict:
                         help="Influxdb unix socket [%(default)s]")
     parser.add_argument("--influx-measurements-mapping", default="mapping",
                         help="Influxdb unix socket [%(default)s]")
+    # web
     parser.add_argument("--prometheus-web-host", default="0.0.0.0",
                         help="Prometheus web server host [default: %(default)s]")
     parser.add_argument("--prometheus-web-port", default="8080",
                         help="Prometheus web server port [default: %(default)s]")
+    # kafka
+    parser.add_argument("--kafka-bootstrap-servers", default="kafka:9092",
+                        help="Comma separated kafka bootstrap servers [default: %(default)s]")
     parser.add_argument("--kafka-trading-pairs-topic", default="assets_metadata",
                         help="Trading pairs kafka topic [default: %(default)s]")
     parser.add_argument("--kafka-candles-consumer-group-id", default="aggregator",

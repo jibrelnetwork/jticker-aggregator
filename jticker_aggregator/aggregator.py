@@ -27,4 +27,4 @@ class Aggregator(Service):
     async def aggregate(self):
         logger.info("Aggregation started")
         async for candle in self.candle_provider:
-            print(candle)
+            await self.candle_consumer.store_candle(candle)

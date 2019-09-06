@@ -86,4 +86,4 @@ class CandleProvider(Service):
             except Exception:
                 logger.exception("Exception on candle parsing")
             else:
-                yield message.topic, candle
+                yield candle
