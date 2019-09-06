@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from datetime import datetime
 
 import backoff
 from mode import Service
@@ -79,13 +78,13 @@ class SingleCandleConsumer(Service):
         Store candles from queue to influxdb.
         """
         while True:
-            candle = await self.candle_queue.get()
+            candle: Candle = await self.candle_queue.get()
             measurement = await self._get_measurement_by_candle(candle)
             influx_record = {
                 "measurement": measurement,
                 # precision is not supported by aioinflux
                 # (https://github.com/gusutabopb/aioinflux/issues/25)
-                "time": datetime.fromtimestamp(candle.timestamp),
+                "time": candle.time_iso8601,
                 "tags": {
                     "interval": candle.interval.value,
                     "version": 0,

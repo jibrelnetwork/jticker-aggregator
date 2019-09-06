@@ -72,9 +72,9 @@ class CandleProvider(Service):
                 updated = False
             else:
                 if tp.topic in self.trading_pairs:
-                    logger.debug("New trading pair {}", tp)
-                else:
                     logger.debug("Update trading pair {} to {}", self.trading_pairs[tp.topic], tp)
+                else:
+                    logger.debug("New trading pair {}", tp)
                 self.trading_pairs[tp.topic] = tp
                 updated = True
 
