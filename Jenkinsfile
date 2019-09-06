@@ -10,7 +10,7 @@ builder(
                         entrypoint: "",
                         jUnitPath: '/junit-reports',
                         command: [
-                                'pip install --no-cache-dir -r requirements-dev.txt',
+                                'pip install --no-cache-dir -e ./[dev]',
                                 'mkdir -p /junit-reports',
                                 'pylama',
                                 'mypy --junit-xml=/junit-reports/mypy-junit-report.xml .',
@@ -52,7 +52,8 @@ builder(
                                 ],
                         ],
                         command: [
-                                'pip install --no-cache-dir -r requirements-dev.txt',
+                                'pip install --no-cache-dir -e ./jticker-core',
+                                'pip install --no-cache-dir -e ./[dev]',
                                 'mkdir -p /junit-reports',
                                 'pytest --junitxml=/junit-reports/pytest-junit-report.xml --cov=jticker_aggregator --cov-report xml:/coverage-reports/pytest-coverage-report.xml',
                         ],
