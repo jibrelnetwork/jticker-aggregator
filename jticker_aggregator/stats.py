@@ -6,9 +6,7 @@ from prometheus_client import Counter as PrometheusCounter
 from mode import Service
 from loguru import logger
 
-from jticker_core import Candle
-
-from .injector import inject, register
+from jticker_core import Candle, inject, register
 
 
 @register(singleton=True, name="aggregator_stats")
