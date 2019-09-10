@@ -9,9 +9,8 @@ import mode
 from loguru import logger
 from addict import Dict
 
-from jticker_core import configure_logging, ignore_aiohttp_ssl_eror
+from jticker_core import configure_logging, ignore_aiohttp_ssl_eror, inject, register
 
-from .injector import inject, register
 from .aggregator import Aggregator
 from .prometheus_server import PrometheusMetricsServer
 

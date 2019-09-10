@@ -7,9 +7,7 @@ from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
-from jticker_core import TradingPair, Candle
-
-from .injector import register, inject
+from jticker_core import TradingPair, Candle, register, inject
 
 
 @register(singleton=True, name="candle_provider")

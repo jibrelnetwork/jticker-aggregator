@@ -8,9 +8,8 @@ from aiohttp import ClientError
 from aioinflux import InfluxDBClient, InfluxDBError
 from loguru import logger
 
-from jticker_core import Candle, TradingPair
+from jticker_core import Candle, TradingPair, inject, register
 
-from .injector import inject, register
 from .stats import AggregatorStats
 
 

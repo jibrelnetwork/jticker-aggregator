@@ -1,7 +1,8 @@
 from mode import Service
 from loguru import logger
 
-from .injector import inject, register
+from jticker_core import inject, register
+
 from .candle_provider import CandleProvider
 from .candle_consumer import CandleConsumer
 

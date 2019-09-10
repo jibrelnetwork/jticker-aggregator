@@ -4,7 +4,7 @@ from mode import Service
 from loguru import logger
 from addict import Dict
 
-from .injector import inject, register
+from jticker_core import inject, register
 
 
 @register(singleton=True)
