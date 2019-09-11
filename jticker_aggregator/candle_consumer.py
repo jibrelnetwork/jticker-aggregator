@@ -20,6 +20,7 @@ class SingleCandleConsumer(Service):
         super().__init__()
         self.config = config
         self.host = host
+        self.logger = logger.bind(prefix=host)
         self.client = InfluxDBClient(
             host=host,
             port=int(config.influx_port),
@@ -38,8 +39,7 @@ class SingleCandleConsumer(Service):
         max_time=5 * 60)
     async def on_start(self):
         await self._load_measurements()
-        logger.info("[{}] loaded {} mapping values from influx",
-                    self.host, len(self._measurement_mapping))
+        self.logger.info("loaded {} mapping values from influx", len(self._measurement_mapping))
         self.add_future(self._consume_candles())
 
     async def on_stop(self):
@@ -116,7 +116,7 @@ class SingleCandleConsumer(Service):
                 }
             })
             self._measurement_mapping[key] = measurement
-            logger.info("[{}] add measurement mapping {!r}:{!r}", self.host, key, measurement)
+            self.logger.info("add measurement mapping {!r}:{!r}", key, measurement)
         return self._measurement_mapping[key]
 
 
