@@ -82,8 +82,10 @@ class CandleProvider(Service):
 
     async def __aiter__(self):
         await self._candle_subscriptions_present.wait()
+        logger.info("candle consumer starting...")
         try:
             await self.candles_consumer.start()
+            logger.info("candle consumer started")
             async for message in self.candles_consumer:
                 logger.debug("Candle message received: {}", message)
                 try:
