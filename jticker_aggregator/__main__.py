@@ -6,13 +6,14 @@ from pathlib import Path
 
 import sentry_sdk
 import mode
+import prometheus_client
 from loguru import logger
 from addict import Dict
+from aiohttp import web
 
-from jticker_core import configure_logging, ignore_aiohttp_ssl_eror, inject, register
+from jticker_core import configure_logging, ignore_aiohttp_ssl_eror, inject, register, WebServer
 
 from .aggregator import Aggregator
-from .prometheus_server import PrometheusMetricsServer
 
 
 @register(singleton=True)
@@ -48,9 +49,9 @@ def config(version: str) -> Dict:
     parser.add_argument("--influx-measurements-mapping", default="mapping",
                         help="Influxdb unix socket [%(default)s]")
     # web
-    parser.add_argument("--prometheus-web-host", default="0.0.0.0",
+    parser.add_argument("--web-host", default="0.0.0.0",
                         help="Prometheus web server host [default: %(default)s]")
-    parser.add_argument("--prometheus-web-port", default="8080",
+    parser.add_argument("--web-port", default="8080",
                         help="Prometheus web server port [default: %(default)s]")
     # kafka
     parser.add_argument("--kafka-bootstrap-servers", default="kafka:9092",
@@ -74,9 +75,33 @@ class Worker(mode.Worker):
         pass
 
 
+async def healthcheck(request):
+    return web.json_response(dict(healthy=True))
+
+
+async def metrics(request):
+    body = prometheus_client.exposition.generate_latest().decode("utf-8")
+    content_type = prometheus_client.exposition.CONTENT_TYPE_LATEST
+    return web.Response(body=body, headers={"Content-Type": content_type})
+
+
+@register
 @inject
-def main(config: Dict, version: str, aggregator: Aggregator,
-         prometheus_server: PrometheusMetricsServer):
+def host(config):
+    return config.web_host
+
+
+@register
+@inject
+def port(config):
+    return config.web_port
+
+
+@inject
+def main(config: Dict, version: str, aggregator: Aggregator, web_server: WebServer):
+    web_server.app.router.add_route("GET", "/healthcheck", healthcheck)
+    web_server.app.router.add_route("GET", "/metrics", metrics)
+
     loop = asyncio.get_event_loop()
     ignore_aiohttp_ssl_eror(loop, "3.5.4")
     configure_logging(config.log_level)
@@ -85,7 +110,7 @@ def main(config: Dict, version: str, aggregator: Aggregator,
     if config.sentry_dsn:
         sentry_sdk.init(config.sentry_dsn, release=version)
     logger.info("Jticker aggregator version {}", version)
-    Worker(aggregator, prometheus_server).execute_from_commandline()
+    Worker(aggregator, web_server).execute_from_commandline()
 
 
 main()
