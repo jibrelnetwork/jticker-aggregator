@@ -4,6 +4,7 @@ import backoff
 from mode import Service
 from addict import Dict
 from loguru import logger
+from kafka.errors import NoBrokersAvailable
 
 from jticker_core import TradingPair, Candle, register, inject
 
@@ -17,32 +18,36 @@ class CandleProvider(Service):
     def __init__(self, config: Dict):
         super().__init__()
         self.config = config
-        self.trading_pairs_consumer = Consumer(
-            config.kafka_trading_pairs_topic,
-            bootstrap_servers=config.kafka_bootstrap_servers,
-            auto_offset_reset="earliest",
-        )
         self.trading_pairs = Dict()
         self.trading_pairs_queue: asyncio.Queue = asyncio.Queue(maxsize=10 ** 3)
-        self.candles_consumer = Consumer(
-            bootstrap_servers=config.kafka_bootstrap_servers,
-            auto_offset_reset="earliest",
-            group_id=config.kafka_candles_consumer_group_id,
-        )
+        self.trading_pairs_consumer = None
+        self.candles_consumer = None
 
     @backoff.on_exception(
         backoff.expo,
-        ConnectionError,
+        (ConnectionError, NoBrokersAvailable),
         max_time=5 * 60)
     async def on_start(self):
+        self.trading_pairs_consumer = Consumer(
+            self.config.kafka_trading_pairs_topic,
+            bootstrap_servers=self.config.kafka_bootstrap_servers,
+            auto_offset_reset="earliest",
+        )
         await self.trading_pairs_consumer.start()
+        self.candles_consumer = Consumer(
+            bootstrap_servers=self.config.kafka_bootstrap_servers,
+            auto_offset_reset="earliest",
+            group_id=self.config.kafka_candles_consumer_group_id,
+        )
         await self.candles_consumer.start()
         self.add_future(self._consume_trading_pairs())
         self.add_future(self._subscribe_trading_pairs())
 
     async def on_stop(self):
-        await self.trading_pairs_consumer.stop()
-        await self.candles_consumer.stop()
+        if self.trading_pairs_consumer is not None:
+            await self.trading_pairs_consumer.stop()
+        if self.candles_consumer is not None:
+            await self.candles_consumer.stop()
 
     async def _consume_trading_pairs(self):
         async for message in self.trading_pairs_consumer:
