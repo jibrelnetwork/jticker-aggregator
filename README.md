@@ -14,3 +14,6 @@ Available environment variables:
 * `INFLUX_UNIX_SOCKET` (default: `None`) — unix socket to use
 * `LOG_LEVEL` (default: `INFO`) — log level (`ERROR`, `INFO`, `WARN`, `DEBUG`)
 * `SENTRY_DSN` (default: _empty_) — Sentry DSN connection string
+
+## Notes
+There is an issue: starting kafka and client at the same time leads to total freeze of clients. Start kafka first, when "started" message appears you can start aggregator/grabber.
