@@ -31,6 +31,11 @@ class CandleProvider(Service):
             auto_offset_reset="earliest",
             group_id=config.kafka_candles_consumer_group_id,
         )
+        # aiokafka bug workaround
+        # https://github.com/aio-libs/aiokafka/issues/536
+        # https://github.com/aio-libs/aiokafka/pull/539
+        # TODO: replace when fixed
+        self._candle_subscriptions_present = asyncio.Event()
 
     @backoff.on_exception(
         backoff.expo,
@@ -38,13 +43,11 @@ class CandleProvider(Service):
         max_time=5 * 60)
     async def on_start(self):
         await self.trading_pairs_consumer.start()
-        await self.candles_consumer.start()
         self.add_future(self._consume_trading_pairs())
         self.add_future(self._subscribe_trading_pairs())
 
     async def on_stop(self):
         await self.trading_pairs_consumer.stop()
-        await self.candles_consumer.stop()
 
     async def _consume_trading_pairs(self):
         async for message in self.trading_pairs_consumer:
@@ -67,6 +70,7 @@ class CandleProvider(Service):
                 topics = list(self.trading_pairs)
                 logger.info("Update candles subscribe topics (count: {})", len(topics))
                 self.candles_consumer.subscribe(topics=topics)
+                self._candle_subscriptions_present.set()
                 updated = False
             else:
                 if tp.topic in self.trading_pairs:
@@ -77,11 +81,18 @@ class CandleProvider(Service):
                 updated = True
 
     async def __aiter__(self):
-        async for message in self.candles_consumer:
-            logger.debug("Candle message received: {}", message)
-            try:
-                candle = Candle.from_json(message.value)
-            except Exception:
-                logger.exception("Exception on candle parsing")
-            else:
-                yield candle
+        await self._candle_subscriptions_present.wait()
+        logger.info("candle consumer starting...")
+        try:
+            await self.candles_consumer.start()
+            logger.info("candle consumer started")
+            async for message in self.candles_consumer:
+                logger.debug("Candle message received: {}", message)
+                try:
+                    candle = Candle.from_json(message.value)
+                except Exception:
+                    logger.exception("Exception on candle parsing")
+                else:
+                    yield candle
+        finally:
+            await self.candles_consumer.stop()
