@@ -2,12 +2,12 @@ import asyncio
 
 import backoff
 from mode import Service
-from aiokafka import AIOKafkaConsumer
-from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
 from jticker_core import TradingPair, Candle, register, inject
+
+from .kafka_wrapper import Consumer
 
 
 @register(singleton=True, name="candle_provider")
@@ -17,16 +17,14 @@ class CandleProvider(Service):
     def __init__(self, config: Dict):
         super().__init__()
         self.config = config
-        self.trading_pairs_consumer = AIOKafkaConsumer(
+        self.trading_pairs_consumer = Consumer(
             config.kafka_trading_pairs_topic,
-            loop=asyncio.get_event_loop(),
             bootstrap_servers=config.kafka_bootstrap_servers,
             auto_offset_reset="earliest",
         )
         self.trading_pairs = Dict()
         self.trading_pairs_queue: asyncio.Queue = asyncio.Queue(maxsize=10 ** 3)
-        self.candles_consumer = AIOKafkaConsumer(
-            loop=asyncio.get_event_loop(),
+        self.candles_consumer = Consumer(
             bootstrap_servers=config.kafka_bootstrap_servers,
             auto_offset_reset="earliest",
             group_id=config.kafka_candles_consumer_group_id,
@@ -66,7 +64,7 @@ class CandleProvider(Service):
                     continue
                 topics = list(self.trading_pairs)
                 logger.info("Update candles subscribe topics (count: {})", len(topics))
-                self.candles_consumer.subscribe(topics=topics)
+                await self.candles_consumer.subscribe(topics=topics)
                 updated = False
             else:
                 if tp.topic in self.trading_pairs:
