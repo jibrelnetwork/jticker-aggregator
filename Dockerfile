@@ -4,7 +4,7 @@ ENV KAFKA_BOOTSTRAP_SERVERS "kafka:9092"
 ENV INFLUX_HOST "influxdb"
 ENV INFLUX_PORT "8086"
 ENV INFLUX_DB "test"
-ENV INFLUX_SSL "false"
+ENV INFLUX_SSL ""
 ENV INFLUX_USERNAME ""
 ENV INFLUX_PASSWORD ""
 ENV INFLUX_UNIX_SOCKET ""
@@ -31,15 +31,10 @@ RUN apk add snappy-dev
 
 WORKDIR /app
 
+COPY --chown=app:app . /app/
 RUN pip install --no-cache-dir -U pip
-
-COPY --chown=app:app requirements-heavy.txt /app/
-RUN pip install --no-cache-dir -r requirements-heavy.txt
-
-COPY --chown=app:app requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY --chown=app:app . /app
+RUN pip install --no-cache-dir -e ./jticker-core
+RUN pip install --no-cache-dir -e .
 
 USER app
 

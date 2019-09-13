@@ -2,9 +2,10 @@ FROM jticker/aggregator
 
 USER root
 
-COPY --chown=app:app requirements-dev.txt /app/
+COPY --chown=app:app . /app/
 
-RUN pip install --no-cache-dir -r requirements-dev.txt
+RUN pip install --no-cache-dir -e /app/jticker-core
+RUN pip install --no-cache-dir -e /app/[dev]
 
 USER app
 
