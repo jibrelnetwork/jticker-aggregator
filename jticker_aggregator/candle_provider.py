@@ -7,7 +7,7 @@ from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
-from jticker_core import TradingPair, Candle, register, inject
+from jticker_core import TradingPair, Candle, register, inject, normalize_kafka_topic
 
 
 @register(singleton=True, name="candle_provider")
@@ -73,11 +73,12 @@ class CandleProvider(Service):
                 self._candle_subscriptions_present.set()
                 updated = False
             else:
-                if tp.topic in self.trading_pairs:
-                    logger.debug("Update trading pair {} to {}", self.trading_pairs[tp.topic], tp)
+                topic = normalize_kafka_topic(tp.topic)
+                if topic in self.trading_pairs:
+                    logger.debug("Update trading pair {} to {}", self.trading_pairs[topic], tp)
                 else:
                     logger.debug("New trading pair {}", tp)
-                self.trading_pairs[tp.topic] = tp
+                self.trading_pairs[topic] = tp
                 updated = True
 
     async def __aiter__(self):
