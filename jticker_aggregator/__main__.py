@@ -62,6 +62,9 @@ def config(version: str) -> Dict:
                         help="Trading pairs kafka topic [default: %(default)s]")
     parser.add_argument("--kafka-candles-consumer-group-id", default="aggregator",
                         help="Kafka candles consumer group id [default: %(default)s]")
+    parser.add_argument("--kafka-candles-stuck-timeout", default="600",
+                        help="Kafka candle consumer stuck timeout in seconds "
+                             "[default: %(default)s]")
     args = vars(parser.parse_args())
     env = {k.lower(): v for k, v in os.environ.items() if k.lower() in args}
     return Dict(**collections.ChainMap(env, args))
