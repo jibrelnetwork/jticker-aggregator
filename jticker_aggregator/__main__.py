@@ -105,8 +105,6 @@ def main(config: Dict, version: str, aggregator: Aggregator, web_server: WebServ
     loop = asyncio.get_event_loop()
     ignore_aiohttp_ssl_eror(loop, "3.5.4")
     configure_logging(config.log_level)
-    if config.log_level == "DEBUG":
-        loop.set_debug(True)
     if config.sentry_dsn:
         sentry_sdk.init(config.sentry_dsn, release=version)
     logger.info("Jticker aggregator version {}", version)
