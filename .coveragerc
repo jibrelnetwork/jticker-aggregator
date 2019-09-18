@@ -1,0 +1,4 @@
+[report]
+show_missing = True
+omit =
+    jticker_aggregator/__main__.py
