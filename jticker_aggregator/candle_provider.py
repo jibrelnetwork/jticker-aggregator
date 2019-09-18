@@ -63,7 +63,8 @@ class CandleProvider(Service):
         updated = False
         while True:
             try:
-                tp = await asyncio.wait_for(self.trading_pairs_queue.get(), 1)
+                tp = await asyncio.wait_for(self.trading_pairs_queue.get(),
+                                            float(self.config.trading_pair_queue_timeout))
             except asyncio.TimeoutError:
                 if not updated:
                     continue

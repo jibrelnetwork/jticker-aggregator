@@ -33,6 +33,8 @@ def config(version: str) -> Dict:
                         help="Python logging level [default: %(default)s]")
     parser.add_argument("--stats-log-interval", default="60",
                         help="Stats logging interval [default: %(default)s]")
+    parser.add_argument("--trading-pair-queue-timeout", default="1",
+                        help="Internal trading pair queue establish timeout [default: %(default)s]")
     # influx
     parser.add_argument("--influx-host", default="influxdb",
                         help="Influxdb hosts (comma separated) [default: %(default)s]")
