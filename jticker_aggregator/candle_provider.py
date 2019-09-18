@@ -7,7 +7,8 @@ from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
-from jticker_core import TradingPair, Candle, register, inject, normalize_kafka_topic
+from jticker_core import (TradingPair, Candle, register, inject, normalize_kafka_topic,
+                          StuckTimeOuter)
 
 
 @register(singleton=True, name="candle_provider")
@@ -88,7 +89,8 @@ class CandleProvider(Service):
         try:
             await self.candles_consumer.start()
             logger.info("candle consumer started")
-            async for message in self.candles_consumer:
+            timeout = float(self.config.kafka_candles_stuck_timeout)
+            async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
                     candle = Candle.from_json(message.value)
