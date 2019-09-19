@@ -151,6 +151,7 @@ def config():
         influx_measurements_mapping="FAKE_MAPPING_TABLE",
     )
     injector.register(name="config")(lambda: d)
+    injector.register(name="version")(lambda: "tests")
     return d
 
 
