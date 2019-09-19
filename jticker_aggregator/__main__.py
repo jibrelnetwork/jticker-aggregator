@@ -62,6 +62,9 @@ def config(version: str) -> Dict:
                         help="Trading pairs kafka topic [default: %(default)s]")
     parser.add_argument("--kafka-candles-consumer-group-id", default="aggregator",
                         help="Kafka candles consumer group id [default: %(default)s]")
+    parser.add_argument("--kafka-candles-stuck-timeout", default="600",
+                        help="Kafka candle consumer stuck timeout in seconds "
+                             "[default: %(default)s]")
     args = vars(parser.parse_args())
     env = {k.lower(): v for k, v in os.environ.items() if k.lower() in args}
     return Dict(**collections.ChainMap(env, args))
@@ -107,8 +110,6 @@ def main(config: Dict, version: str, aggregator: Aggregator, web_server: WebServ
     loop = asyncio.get_event_loop()
     ignore_aiohttp_ssl_eror(loop, "3.5.4")
     configure_logging(config.log_level)
-    if config.log_level == "DEBUG":
-        loop.set_debug(True)
     if config.sentry_dsn:
         sentry_sdk.init(config.sentry_dsn, release=version)
     logger.info("Jticker aggregator version {}", version)

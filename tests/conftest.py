@@ -139,6 +139,7 @@ def mocked_influx(monkeypatch):
 def config():
     d = Dict(
         kafka_trading_pairs_topic="test_kafka_trading_pairs_topic",
+        kafka_candles_stuck_timeout="1",
         trading_pair_queue_timeout="0.01",
         stats_log_interval=0.1,
         influx_host="test-influxdb",
@@ -150,6 +151,7 @@ def config():
         influx_measurements_mapping="FAKE_MAPPING_TABLE",
     )
     injector.register(name="config")(lambda: d)
+    injector.register(name="version")(lambda: "tests")
     return d
 
 

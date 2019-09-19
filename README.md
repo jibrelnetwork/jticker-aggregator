@@ -5,6 +5,7 @@
 Available environment variables:
 
 * `KAFKA_BOOTSTRAP_SERVERS` (default: `kafka:9092`) — comma separated list of kafka bootstrap servers
+* `KAFKA_CANDLES_STUCK_TIMEOUT` (default: `600`) - fall down on stuck timeout
 * `INFLUX_HOST` (default: `influxdb`) — comma-separated influxdb host list
 * `INFLUX_PORT` (default: `8086`) — influxdb port
 * `INFLUX_DB` (default: `test`) — influxdb database name **TODO: change default to `jticker`**

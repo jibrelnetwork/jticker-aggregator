@@ -16,10 +16,11 @@ from .stats import AggregatorStats
 class SingleCandleConsumer(Service):
 
     @inject
-    def __init__(self, config: Dict, host: str):
+    def __init__(self, config: Dict, host: str, version: str):
         super().__init__()
         self.config = config
         self.host = host
+        self.version = version
         self.logger = logger.bind(prefix=host)
         self.client = InfluxDBClient(
             host=host,
@@ -87,6 +88,7 @@ class SingleCandleConsumer(Service):
                 "tags": {
                     "interval": candle.interval.value,
                     "version": 0,
+                    "aggregator_version": self.version,
                 },
                 "fields": {
                     "open": candle.open,
@@ -109,6 +111,9 @@ class SingleCandleConsumer(Service):
             measurement = f"{tp.exchange}_{tp.symbol}_{uuid.uuid4().hex}"
             await self.client.write({
                 "measurement": self.config.influx_measurements_mapping,
+                "tags": {
+                    "aggregator_version": self.version,
+                },
                 "fields": {
                     "exchange": tp.exchange,
                     "symbol": tp.symbol,

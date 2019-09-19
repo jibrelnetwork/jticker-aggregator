@@ -35,6 +35,7 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, condition,
     assert candles[0]["fields"]["high"] == c.high
     assert candles[0]["fields"]["low"] == c.low
     assert candles[0]["fields"]["close"] == c.close
+    assert candles[0]["tags"]["aggregator_version"] == "tests"
 
 
 @pytest.mark.asyncio
@@ -93,3 +94,11 @@ async def test_non_empty_influx(not_started_aggregator, mocked_influx, condition
     )
     async with not_started_aggregator as a:
         await condition(lambda: len(a.candle_consumer.consumers[0]._measurement_mapping) > 0)
+
+
+@pytest.mark.asyncio
+async def test_stuck(not_started_aggregator, mocked_kafka, config, condition):
+    tp = TradingPair(symbol="ETHBTC", exchange="ex")
+    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
+    async with not_started_aggregator:
+        await condition(lambda: not_started_aggregator.crashed)
