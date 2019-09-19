@@ -35,6 +35,7 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, condition,
     assert candles[0]["fields"]["high"] == c.high
     assert candles[0]["fields"]["low"] == c.low
     assert candles[0]["fields"]["close"] == c.close
+    assert candles[0]["tags"]["aggregator_version"] == "tests"
 
 
 @pytest.mark.asyncio
