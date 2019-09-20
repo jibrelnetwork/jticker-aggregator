@@ -123,7 +123,10 @@ class _FakeInfluxClient:
         )
 
     async def write(self, measurement):
-        self._fake_influx.put(measurement["measurement"], measurement)
+        if not isinstance(measurement, list):
+            measurement = [measurement]
+        for m in measurement:
+            self._fake_influx.put(m["measurement"], m)
 
 
 @pytest.fixture(autouse=True)
@@ -142,6 +145,7 @@ def config():
         kafka_candles_stuck_timeout="1",
         trading_pair_queue_timeout="0.01",
         stats_log_interval=0.1,
+        influx_chunk_size="1",
         influx_host="test-influxdb",
         influx_port="123",
         influx_db="test_db",

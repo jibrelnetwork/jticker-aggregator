@@ -31,7 +31,10 @@ class SingleCandleConsumer(Service):
             username=config.influx_username,
             password=config.influx_password,
         )
-        self.candle_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+        self._influx_chunk_size = int(self.config.influx_chunk_size)
+        self._influx_chunk_lock = asyncio.Lock()
+        self._influx_chunk: list = []
+        self.candle_queue: asyncio.Queue = asyncio.Queue(maxsize=self._influx_chunk_size * 2)
         self._measurement_mapping = None
 
     @backoff.on_exception(
@@ -44,6 +47,7 @@ class SingleCandleConsumer(Service):
         self.add_future(self._consume_candles())
 
     async def on_stop(self):
+        await self._write_measurement(flush=True)
         await self.client.close()
 
     def _trading_pair_key(self, tp: TradingPair):
@@ -67,6 +71,14 @@ class SingleCandleConsumer(Service):
             tp = TradingPair(item["symbol"], item["exchange"])
             key = self._trading_pair_key(tp)
             self._measurement_mapping[key] = item["measurement"]
+
+    async def _write_measurement(self, influx_measurement=None, *, flush=False):
+        async with self._influx_chunk_lock:
+            if influx_measurement is not None:
+                self._influx_chunk.append(influx_measurement)
+            if len(self._influx_chunk) >= self._influx_chunk_size or flush:
+                await self.client.write(self._influx_chunk)
+                self._influx_chunk = []
 
     @backoff.on_exception(
         backoff.constant,
@@ -99,7 +111,7 @@ class SingleCandleConsumer(Service):
                     "quote_volume": candle.quote_volume,
                 }
             }
-            await self.client.write(influx_record)
+            await self._write_measurement(influx_record)
             self.candle_queue.task_done()
 
     async def _get_measurement_by_candle(self, candle: Candle):
@@ -109,7 +121,7 @@ class SingleCandleConsumer(Service):
             raise RuntimeError("Measurements mapping is not loaded")
         if key not in self._measurement_mapping:
             measurement = f"{tp.exchange}_{tp.symbol}_{uuid.uuid4().hex}"
-            await self.client.write({
+            await self._write_measurement({
                 "measurement": self.config.influx_measurements_mapping,
                 "tags": {
                     "aggregator_version": self.version,
