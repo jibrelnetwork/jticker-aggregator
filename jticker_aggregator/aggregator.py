@@ -1,5 +1,7 @@
+import backoff
 from mode import Service
 from loguru import logger
+from kafka.errors import UnknownMemberIdError
 
 from jticker_core import inject, register
 
@@ -25,6 +27,11 @@ class Aggregator(Service):
     async def on_started(self):
         self.add_future(self.aggregate())
 
+    @backoff.on_exception(
+        backoff.constant,
+        (UnknownMemberIdError,),
+        jitter=None,
+        interval=1)
     async def aggregate(self):
         logger.info("Aggregation started")
         async for candle in self.candle_provider:

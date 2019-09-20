@@ -56,7 +56,7 @@ class CandleProvider(Service):
             try:
                 tp = TradingPair.from_json(message.value)
             except Exception:
-                logger.exception("Exception on trading pair parsing")
+                continue
             else:
                 await self.trading_pairs_queue.put(tp)
 
@@ -95,7 +95,7 @@ class CandleProvider(Service):
                 try:
                     candle = Candle.from_json(message.value)
                 except Exception:
-                    logger.exception("Exception on candle parsing")
+                    continue
                 else:
                     yield candle
         finally:
