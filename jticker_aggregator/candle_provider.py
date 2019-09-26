@@ -87,9 +87,9 @@ class CandleProvider(Service):
         await self._candle_subscriptions_present.wait()
         logger.info("candle consumer starting...")
         try:
-            await self.candles_consumer.start()
-            logger.info("candle consumer started")
             timeout = float(self.config.kafka_candles_stuck_timeout)
+            await asyncio.wait_for(self.candles_consumer.start(), timeout)
+            logger.info("candle consumer started")
             async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
