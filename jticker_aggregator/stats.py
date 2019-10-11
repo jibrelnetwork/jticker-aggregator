@@ -16,15 +16,22 @@ class AggregatorStats(Service):
     def __init__(self, config):
         super().__init__()
         self.by_exchange: Counter = Counter()
-        self.counters: Dict[str, PrometheusCounter] = {}
+        self.counter = PrometheusCounter(
+            "aggregator_candles_total",
+            "Jticker aggregator candles count",
+            labelnames=("exchange", "symbol"),
+        )
         self.unique_symbols: Dict[str, set] = defaultdict(set)
         self.log_interval: int = int(config.stats_log_interval)
 
+    def _tr(self, s: str):
+        return s.translate(self._translation)
+
     def candle_stored(self, candle: Candle):
-        key = f"aggregator_{candle.exchange}_{candle.symbol}".translate(str.maketrans("-", "_"))
-        if key not in self.counters:
-            self.counters[key] = PrometheusCounter(key, key)
-        self.counters[key].inc()
+        self.counter.labels(
+            self._tr(candle.exchange),
+            self._tr(candle.symbol),
+        ).inc()
         self.by_exchange[candle.exchange] += 1
         self.unique_symbols[candle.exchange].add(candle.symbol)
 
