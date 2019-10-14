@@ -23,6 +23,7 @@ class AggregatorStats(Service):
         )
         self.unique_symbols: Dict[str, set] = defaultdict(set)
         self.log_interval: int = int(config.stats_log_interval)
+        self._translation = str.maketrans("-", "_")
 
     def _tr(self, s: str):
         return s.translate(self._translation)
