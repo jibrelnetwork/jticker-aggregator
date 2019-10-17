@@ -3,7 +3,7 @@ from mode import Service
 from loguru import logger
 from kafka.errors import UnknownMemberIdError
 
-from jticker_core import inject, register
+from jticker_core import inject, register, Rate
 
 from .candle_provider import CandleProvider
 from .candle_consumer import CandleConsumer
@@ -13,8 +13,9 @@ from .candle_consumer import CandleConsumer
 class Aggregator(Service):
 
     @inject
-    def __init__(self, candle_provider: CandleProvider, candle_consumer: CandleConsumer):
+    def __init__(self, config, candle_provider: CandleProvider, candle_consumer: CandleConsumer):
         super().__init__()
+        self.log_period = float(config.stats_log_interval)
         self.candle_provider = candle_provider
         self.candle_consumer = candle_consumer
 
@@ -34,5 +35,7 @@ class Aggregator(Service):
         interval=1)
     async def aggregate(self):
         logger.info("Aggregation started")
+        r = Rate(log_period=self.log_period, log_template="{:.3f} candles/s")
         async for candle in self.candle_provider:
+            r.inc()
             await self.candle_consumer.store_candle(candle)

@@ -8,7 +8,7 @@ from aiohttp import ClientError
 from aioinflux import InfluxDBClient, InfluxDBError
 from loguru import logger
 
-from jticker_core import Candle, TradingPair, inject, register
+from jticker_core import inject, register
 
 from .stats import AggregatorStats
 
@@ -32,9 +32,7 @@ class SingleCandleConsumer(Service):
             password=config.influx_password,
         )
         self._influx_chunk_size = int(self.config.influx_chunk_size)
-        self._influx_chunk_lock = asyncio.Lock()
         self._influx_chunk: list = []
-        self.candle_queue: asyncio.Queue = asyncio.Queue(maxsize=self._influx_chunk_size * 2)
         self._measurement_mapping = None
 
     @backoff.on_exception(
@@ -44,14 +42,12 @@ class SingleCandleConsumer(Service):
     async def on_start(self):
         await self._load_measurements()
         self.logger.info("loaded {} mapping values from influx", len(self._measurement_mapping))
-        self.add_future(self._consume_candles())
+        self.add_future(self._store_candles())
 
     async def on_stop(self):
-        await self._write_measurement(flush=True)
+        while self._influx_chunk:
+            await asyncio.sleep(0.1)
         await self.client.close()
-
-    def _trading_pair_key(self, tp: TradingPair):
-        return f"{tp.exchange}:{tp.symbol}"
 
     async def _load_measurements(self):
         """
@@ -68,67 +64,64 @@ class SingleCandleConsumer(Service):
         series = resp["results"][0]["series"][0]
         result = [dict(zip(series["columns"], row)) for row in series["values"]]
         for item in result:
-            tp = TradingPair(item["symbol"], item["exchange"])
-            key = self._trading_pair_key(tp)
+            key = item["exchange"], item["symbol"]
             self._measurement_mapping[key] = item["measurement"]
-
-    async def _write_measurement(self, influx_measurement=None, *, flush=False):
-        async with self._influx_chunk_lock:
-            if influx_measurement is not None:
-                self._influx_chunk.append(influx_measurement)
-            if len(self._influx_chunk) >= self._influx_chunk_size or flush:
-                await self.client.write(self._influx_chunk)
-                self._influx_chunk = []
 
     @backoff.on_exception(
         backoff.constant,
         (ClientError, InfluxDBError),
         jitter=None,
         interval=1)
-    async def _consume_candles(self):
-        """
-        Store candles from queue to influxdb.
-        """
+    async def _store_candles(self):
         while True:
-            candle: Candle = await self.candle_queue.get()
-            measurement = await self._get_measurement_by_candle(candle)
-            influx_record = {
-                "measurement": measurement,
-                # precision is not supported by aioinflux
-                # (https://github.com/gusutabopb/aioinflux/issues/25)
-                "time": candle.time_iso8601,
-                "tags": {
-                    "interval": candle.interval.value,
-                    "version": 0,
-                    "aggregator_version": self.version,
-                },
-                "fields": {
-                    "open": candle.open,
-                    "high": candle.high,
-                    "low": candle.low,
-                    "close": candle.close,
-                    "base_volume": candle.base_volume,
-                    "quote_volume": candle.quote_volume,
-                }
-            }
-            await self._write_measurement(influx_record)
-            self.candle_queue.task_done()
+            while not self._influx_chunk:
+                await asyncio.sleep(0.25)
+            chunk, self._influx_chunk = self._influx_chunk, []
+            await self.client.write(chunk)
 
-    async def _get_measurement_by_candle(self, candle: Candle):
-        tp = TradingPair(exchange=candle.exchange, symbol=candle.symbol)
-        key = self._trading_pair_key(tp)
+    def _add_measurement(self, measurement):
+        self._influx_chunk.append(measurement)
+
+    def should_wait(self):
+        return len(self._influx_chunk) > self._influx_chunk_size
+
+    def add(self, candle):
+        measurement = self._get_measurement_by_candle(candle)
+        influx_record = {
+            "measurement": measurement,
+            # precision is not supported by aioinflux
+            # (https://github.com/gusutabopb/aioinflux/issues/25)
+            "time": candle["time_iso8601"],
+            "tags": {
+                "interval": candle["interval"],
+                "version": 0,
+                "aggregator_version": self.version,
+            },
+            "fields": {
+                "open": candle["open"],
+                "high": candle["high"],
+                "low": candle["low"],
+                "close": candle["close"],
+                "base_volume": candle["base_volume"],
+                "quote_volume": candle["quote_volume"],
+            }
+        }
+        self._add_measurement(influx_record)
+
+    def _get_measurement_by_candle(self, candle):
+        key = exchange, symbol = candle["exchange"], candle["symbol"]
         if self._measurement_mapping is None:
             raise RuntimeError("Measurements mapping is not loaded")
         if key not in self._measurement_mapping:
-            measurement = f"{tp.exchange}_{tp.symbol}_{uuid.uuid4().hex}"
-            await self._write_measurement({
+            measurement = f"{exchange}_{symbol}_{uuid.uuid4().hex}"
+            self._add_measurement({
                 "measurement": self.config.influx_measurements_mapping,
                 "tags": {
                     "aggregator_version": self.version,
                 },
                 "fields": {
-                    "exchange": tp.exchange,
-                    "symbol": tp.symbol,
+                    "exchange": exchange,
+                    "symbol": symbol,
                     "measurement": measurement,
                 }
             })
@@ -150,10 +143,9 @@ class CandleConsumer(Service):
     def on_init_dependencies(self):
         return self.consumers + [self.aggregator_stats]
 
-    async def store_candle(self, candle: Candle):
-        coros = [asyncio.wait_for(c.candle_queue.put(candle), 10) for c in self.consumers]
-        results = await asyncio.gather(*coros, return_exceptions=True)
-        for r in results:
-            if isinstance(r, asyncio.TimeoutError):
-                logger.opt(exception=r).error("Consumer queue is full")
+    async def store_candle(self, candle):
+        for c in self.consumers:
+            c.add(candle)
+        while any(c.should_wait() for c in self.consumers):
+            await asyncio.sleep(0.1)
         self.aggregator_stats.candle_stored(candle)
