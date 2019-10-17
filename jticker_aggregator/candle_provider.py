@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import backoff
 from mode import Service
@@ -7,8 +8,7 @@ from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
-from jticker_core import (TradingPair, Candle, register, inject, normalize_kafka_topic,
-                          StuckTimeOuter)
+from jticker_core import TradingPair, register, inject, normalize_kafka_topic, StuckTimeOuter
 
 
 @register(singleton=True, name="candle_provider")
@@ -93,8 +93,8 @@ class CandleProvider(Service):
             async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
-                    candle = Candle.from_json(message.value)
-                except Exception:
+                    candle = json.loads(message.value)
+                except json.JSONDecodeError:
                     continue
                 else:
                     yield candle

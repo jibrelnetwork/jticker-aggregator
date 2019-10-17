@@ -50,7 +50,7 @@ def config(version: str) -> Dict:
                         help="Influxdb unix socket [%(default)s]")
     parser.add_argument("--influx-measurements-mapping", default="mapping",
                         help="Influxdb unix socket [%(default)s]")
-    parser.add_argument("--influx-chunk-size", default="1000",
+    parser.add_argument("--influx-chunk-size", default="10000",
                         help="Influx batch/chunk write size [%(default)s]")
     # web
     parser.add_argument("--web-host", default="0.0.0.0",

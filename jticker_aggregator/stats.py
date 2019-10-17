@@ -29,12 +29,13 @@ class AggregatorStats(Service):
         return s.translate(self._translation)
 
     def candle_stored(self, candle: Candle):
+        exchange, symbol = candle["exchange"], candle["symbol"]
         self.counter.labels(
-            self._tr(candle.exchange),
-            self._tr(candle.symbol),
+            self._tr(exchange),
+            self._tr(symbol),
         ).inc()
-        self.by_exchange[candle.exchange] += 1
-        self.unique_symbols[candle.exchange].add(candle.symbol)
+        self.by_exchange[exchange] += 1
+        self.unique_symbols[exchange].add(symbol)
 
     def reset(self):
         self.by_exchange.clear()
