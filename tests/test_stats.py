@@ -18,10 +18,10 @@ async def test_stats_propagation(aggregator, _aggregator_stats, mocked_kafka, co
         symbol="ETHBTC",
         interval=Interval.MIN_1,
         timestamp=t,
-        open=1,
-        high=2,
-        low=3,
-        close=4,
+        open=2,
+        high=4,
+        low=1,
+        close=3,
     )
     mocked_kafka.put(tp.topic, c.as_json())
     await condition(lambda: len(mocked_influx._measurements) == 2)
