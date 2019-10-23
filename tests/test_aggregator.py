@@ -17,10 +17,10 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, condition,
         symbol="ETHBTC",
         interval=Interval.MIN_1,
         timestamp=t,
-        open=1,
-        high=2,
-        low=3,
-        close=4,
+        open=2,
+        high=4,
+        low=1,
+        close=3,
     )
     mocked_kafka.put(tp.topic, c.as_json())
     await condition(lambda: len(mocked_influx._measurements) == 2)
@@ -35,7 +35,7 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, condition,
     assert candles[0]["fields"]["high"] == c.high
     assert candles[0]["fields"]["low"] == c.low
     assert candles[0]["fields"]["close"] == c.close
-    assert candles[0]["tags"]["aggregator_version"] == "tests"
+    assert candles[0]["fields"]["aggregator_version"] == "tests"
 
 
 @pytest.mark.asyncio
@@ -69,10 +69,10 @@ async def test_bad_candle_format(aggregator, mocked_kafka, config, condition, mo
         symbol="ETHBTC",
         interval=Interval.MIN_1,
         timestamp=t,
-        open=1,
-        high=2,
-        low=3,
-        close=4,
+        open=2,
+        high=4,
+        low=1,
+        close=3,
     )
     mocked_kafka.put(tp.topic, "bad string")
     mocked_kafka.put(tp.topic, c.as_json())

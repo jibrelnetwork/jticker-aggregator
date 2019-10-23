@@ -94,10 +94,9 @@ class SingleCandleConsumer(Service):
             "time": candle["time_iso8601"],
             "tags": {
                 "interval": candle["interval"],
-                "version": 0,
-                "aggregator_version": self.version,
             },
             "fields": {
+                "aggregator_version": self.version,
                 "open": candle["open"],
                 "high": candle["high"],
                 "low": candle["low"],
@@ -116,10 +115,8 @@ class SingleCandleConsumer(Service):
             measurement = f"{exchange}_{symbol}_{uuid.uuid4().hex}"
             self._add_measurement({
                 "measurement": self.config.influx_measurements_mapping,
-                "tags": {
-                    "aggregator_version": self.version,
-                },
                 "fields": {
+                    "aggregator_version": self.version,
                     "exchange": exchange,
                     "symbol": symbol,
                     "measurement": measurement,
