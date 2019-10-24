@@ -91,7 +91,7 @@ class SingleCandleConsumer(Service):
             "measurement": measurement,
             # precision is not supported by aioinflux
             # (https://github.com/gusutabopb/aioinflux/issues/25)
-            "time": candle["time_iso8601"],
+            "time": candle["timestamp"] * 10 ** 9,
             "tags": {
                 "interval": candle["interval"],
             },

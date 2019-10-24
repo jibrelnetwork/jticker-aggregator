@@ -29,7 +29,7 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, condition,
     name = mapping[0]["fields"]["measurement"]
     candles = mocked_influx.get(name)
     assert len(candles) == 1
-    assert candles[0]["time"] == c.time_iso8601
+    assert candles[0]["time"] == c.timestamp * 10 ** 9
     assert candles[0]["tags"]["interval"] == c.interval.value
     assert candles[0]["fields"]["open"] == c.open
     assert candles[0]["fields"]["high"] == c.high
