@@ -91,13 +91,12 @@ class SingleCandleConsumer(Service):
             "measurement": measurement,
             # precision is not supported by aioinflux
             # (https://github.com/gusutabopb/aioinflux/issues/25)
-            "time": candle["time_iso8601"],
+            "time": candle["timestamp"] * 10 ** 9,
             "tags": {
                 "interval": candle["interval"],
-                "version": 0,
-                "aggregator_version": self.version,
             },
             "fields": {
+                "aggregator_version": self.version,
                 "open": candle["open"],
                 "high": candle["high"],
                 "low": candle["low"],
@@ -116,10 +115,8 @@ class SingleCandleConsumer(Service):
             measurement = f"{exchange}_{symbol}_{uuid.uuid4().hex}"
             self._add_measurement({
                 "measurement": self.config.influx_measurements_mapping,
-                "tags": {
-                    "aggregator_version": self.version,
-                },
                 "fields": {
+                    "aggregator_version": self.version,
                     "exchange": exchange,
                     "symbol": symbol,
                     "measurement": measurement,
