@@ -49,7 +49,7 @@ def config(version: str) -> Dict:
     parser.add_argument("--influx-unix-socket", default=None,
                         help="Influxdb unix socket [%(default)s]")
     parser.add_argument("--influx-measurements-mapping", default="mapping",
-                        help="Influxdb unix socket [%(default)s]")
+                        help="Influxdb measurements mapping [%(default)s]")
     parser.add_argument("--influx-chunk-size", default="10000",
                         help="Influx batch/chunk write size [%(default)s]")
     # web
