@@ -74,8 +74,11 @@ async def test_bad_candle_format(aggregator, mocked_kafka, config, condition, mo
         low=1,
         close=3,
     )
+    good_candle = c.as_json()
     mocked_kafka.put(tp.topic, "bad string")
+    c.high, c.low = c.low, c.high
     mocked_kafka.put(tp.topic, c.as_json())
+    mocked_kafka.put(tp.topic, good_candle)
     await condition(lambda: len(mocked_influx._measurements) == 2)
 
 

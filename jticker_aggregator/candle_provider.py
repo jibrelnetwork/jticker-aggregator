@@ -8,7 +8,8 @@ from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
-from jticker_core import TradingPair, register, inject, normalize_kafka_topic, StuckTimeOuter
+from jticker_core import (TradingPair, register, inject, normalize_kafka_topic, StuckTimeOuter,
+                          Candle)
 
 
 @register(singleton=True, name="candle_provider")
@@ -93,9 +94,13 @@ class CandleProvider(Service):
             async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
-                    candle = json.loads(message.value)
+                    c = json.loads(message.value)
+                    # candle validation and normalization
+                    candle = Candle.from_dict(c).as_dict()
                 except json.JSONDecodeError:
                     continue
+                except Exception:
+                    logger.exception("can't build candle from {}", c)
                 else:
                     yield candle
         finally:
