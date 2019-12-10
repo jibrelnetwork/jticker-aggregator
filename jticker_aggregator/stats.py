@@ -17,9 +17,9 @@ class AggregatorStats(Service):
         super().__init__()
         self.by_exchange: Counter = Counter()
         self.counter = PrometheusCounter(
-            "aggregator_candles_total",
+            "jticker_aggregator_candles_total",
             "Jticker aggregator candles count",
-            labelnames=("exchange", "symbol"),
+            labelnames=("exchange",),
         )
         self.unique_symbols: Dict[str, set] = defaultdict(set)
         self.log_interval: int = int(config.stats_log_interval)
@@ -30,10 +30,7 @@ class AggregatorStats(Service):
 
     def candle_stored(self, candle: Candle):
         exchange, symbol = candle["exchange"], candle["symbol"]
-        self.counter.labels(
-            self._tr(exchange),
-            self._tr(symbol),
-        ).inc()
+        self.counter.labels(self._tr(exchange)).inc()
         self.by_exchange[exchange] += 1
         self.unique_symbols[exchange].add(symbol)
 
