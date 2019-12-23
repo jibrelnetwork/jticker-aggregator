@@ -94,13 +94,11 @@ class CandleProvider(Service):
             async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
-                    c = json.loads(message.value)
-                    # candle validation and normalization
-                    candle = Candle.from_dict(c).as_dict()
+                    candle = Candle.from_json(message.value)
                 except json.JSONDecodeError:
                     continue
                 except Exception:
-                    logger.exception("can't build candle from {}", c)
+                    logger.exception("can't build candle from {}", message.value)
                 else:
                     yield candle
         finally:

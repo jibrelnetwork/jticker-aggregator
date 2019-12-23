@@ -1,9 +1,11 @@
 import backoff
+import prometheus_client
 from mode import Service
 from loguru import logger
 from kafka.errors import UnknownMemberIdError
+from aiohttp import web
 
-from jticker_core import inject, register, Rate
+from jticker_core import inject, register, Rate, WebServer
 
 from .candle_provider import CandleProvider
 from .candle_consumer import CandleConsumer
@@ -13,16 +15,36 @@ from .candle_consumer import CandleConsumer
 class Aggregator(Service):
 
     @inject
-    def __init__(self, config, candle_provider: CandleProvider, candle_consumer: CandleConsumer):
+    def __init__(self, config, candle_provider: CandleProvider, candle_consumer: CandleConsumer,
+                 web_server: WebServer, web_app: web.Application):
         super().__init__()
         self.log_period = float(config.stats_log_interval)
         self.candle_provider = candle_provider
         self.candle_consumer = candle_consumer
+        self.web_server = web_server
+        self.web_app = web_app
+        self.configure_router()
+
+    def configure_router(self):
+        router = self.web_app.router
+        router.add_route("GET", "/healthcheck", self.healthcheck)
+        router.add_route("GET", "/metrics", self.metrics)
+
+    @staticmethod
+    async def healthcheck(request):
+        return web.json_response(dict(healthy=True))
+
+    @staticmethod
+    async def metrics(request):
+        body = prometheus_client.exposition.generate_latest().decode("utf-8")
+        content_type = prometheus_client.exposition.CONTENT_TYPE_LATEST
+        return web.Response(body=body, headers={"Content-Type": content_type})
 
     def on_init_dependencies(self):
         return [
             self.candle_provider,
             self.candle_consumer,
+            self.web_server,
         ]
 
     async def on_started(self):

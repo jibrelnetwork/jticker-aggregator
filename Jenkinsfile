@@ -54,7 +54,7 @@ builder(
                                 ],
                         ],
                         command: [
-                                'pip install --no-cache-dir -e ./jticker-core',
+                                'pip install --no-cache-dir -e ./jticker-core/[dev]',
                                 'pip install --no-cache-dir -e ./[dev]',
                                 'mkdir -p /junit-reports',
                                 'pytest --junitxml=/junit-reports/pytest-junit-report.xml --cov=jticker_aggregator --cov-report xml:/coverage-reports/pytest-coverage-report.xml',
