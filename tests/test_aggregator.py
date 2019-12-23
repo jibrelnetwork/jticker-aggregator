@@ -1,13 +1,13 @@
 import pytest
 
-from jticker_core import TradingPair, Candle, Interval
+from jticker_core import RawTradingPair, Candle, Interval
 from jticker_core.testing import async_condition
 
 
 @pytest.mark.asyncio
 async def test_successful_lifecycle(aggregator, mocked_kafka, config, timestamp_utc_minute_now,
                                     influx_client, wait_candles):
-    tp = TradingPair(symbol="ab", exchange="ex")
+    tp = RawTradingPair(symbol="ab", exchange="ex")
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
     await async_condition(lambda: len(mocked_kafka.subs) == 2)
     assert tp.topic in mocked_kafka.subs
@@ -30,14 +30,14 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, timestamp_
 @pytest.mark.asyncio
 async def test_bad_trading_pair_format(aggregator, mocked_kafka, config):
     mocked_kafka.put(config.kafka_trading_pairs_topic, "bad string")
-    tp = TradingPair(symbol="ETHBTC", exchange="ex")
+    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
     await async_condition(lambda: len(mocked_kafka.subs) == 2)
 
 
 @pytest.mark.asyncio
 async def test_trading_pair_update(aggregator, mocked_kafka, config):
-    tp = TradingPair(symbol="ETHBTC", exchange="ex")
+    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
     await async_condition(lambda: len(mocked_kafka.subs) == 2)
     tp.symbol = "CHANGED"
@@ -49,7 +49,7 @@ async def test_trading_pair_update(aggregator, mocked_kafka, config):
 @pytest.mark.asyncio
 async def test_bad_candle_format(aggregator, mocked_kafka, config, timestamp_utc_minute_now,
                                  wait_candles):
-    tp = TradingPair(symbol="ETHBTC", exchange="ex")
+    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
     await async_condition(lambda: len(mocked_kafka.subs) == 2)
     assert tp.topic in mocked_kafka.subs
@@ -75,7 +75,7 @@ async def test_bad_candle_format(aggregator, mocked_kafka, config, timestamp_utc
 
 @pytest.mark.asyncio
 async def test_stuck(not_started_aggregator, mocked_kafka, config):
-    tp = TradingPair(symbol="ETHBTC", exchange="ex")
+    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
     async with not_started_aggregator:
         await async_condition(lambda: not_started_aggregator.crashed)

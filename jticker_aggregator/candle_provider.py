@@ -8,7 +8,7 @@ from aiokafka.errors import ConnectionError
 from addict import Dict
 from loguru import logger
 
-from jticker_core import (TradingPair, register, inject, normalize_kafka_topic, StuckTimeOuter,
+from jticker_core import (RawTradingPair, register, inject, normalize_kafka_topic, StuckTimeOuter,
                           Candle)
 
 
@@ -55,7 +55,7 @@ class CandleProvider(Service):
         async for message in self.trading_pairs_consumer:
             logger.debug("Trading pair message received: {}", message)
             try:
-                tp = TradingPair.from_json(message.value)
+                tp = RawTradingPair.from_json(message.value)
             except Exception:
                 continue
             else:

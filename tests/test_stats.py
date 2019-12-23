@@ -1,14 +1,14 @@
 import pytest
 import asyncio
 
-from jticker_core import TradingPair, Candle, Interval
+from jticker_core import RawTradingPair, Candle, Interval
 from jticker_core.testing import async_condition
 
 
 @pytest.mark.asyncio
 async def test_stats_propagation(aggregator, _aggregator_stats, mocked_kafka, config,
                                  timestamp_utc_minute_now, wait_candles):
-    tp = TradingPair(symbol="ETHBTC", exchange="ex")
+    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
     await async_condition(lambda: len(mocked_kafka.subs) == 2)
     assert tp.topic in mocked_kafka.subs
