@@ -9,7 +9,7 @@ from jticker_core.testing import async_condition
 async def test_stats_propagation(aggregator, _aggregator_stats, mocked_kafka, config,
                                  timestamp_utc_minute_now, wait_candles):
     tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.as_json())
+    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
     await async_condition(lambda: len(mocked_kafka.subs) == 2)
     assert tp.topic in mocked_kafka.subs
     c = Candle(
@@ -22,7 +22,7 @@ async def test_stats_propagation(aggregator, _aggregator_stats, mocked_kafka, co
         low=1,
         close=3,
     )
-    mocked_kafka.put(tp.topic, c.as_json())
+    mocked_kafka.put(tp.topic, c.to_json())
     cs = await wait_candles(aggregator.candle_consumer._time_series, tp)
     assert len(cs) == 1
     assert cs[0] == c
