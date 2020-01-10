@@ -1,41 +1,21 @@
-FROM python:3.7-alpine
+FROM python:3.7-slim as builder
 
-ENV KAFKA_BOOTSTRAP_SERVERS "kafka:9092"
-ENV INFLUX_HOST "influxdb"
-ENV INFLUX_PORT "8086"
-ENV INFLUX_DB "test"
-ENV INFLUX_SSL ""
-ENV INFLUX_USERNAME ""
-ENV INFLUX_PASSWORD ""
-ENV INFLUX_UNIX_SOCKET ""
-ENV LOG_LEVEL "INFO"
-ENV SENTRY_DSN ""
-ENV DOCKERIZE_VERSION "v0.6.1"
+RUN apt update && apt install -y \
+        build-essential libsnappy-dev
+COPY jticker-core/requirements.txt /requirements-core.txt
+COPY requirements.txt /
+RUN pip install --no-cache-dir -r requirements-core.txt -r requirements.txt
 
-RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+FROM python:3.7-slim as runner
 
-RUN addgroup -g 111 app \
- && adduser -D -u 111 -G app app \
- && mkdir -p /app \
- && chown -R app:app /app
-
-RUN apk update
-
-# build dependencies
-RUN apk add gcc musl-dev g++
-
-# optional aiokafka dependency https://aiokafka.readthedocs.io/en/stable/#optional-snappy-install
-RUN apk add snappy-dev
+RUN apt update && apt install -y \
+        libsnappy-dev
+COPY --from=builder /usr/local/lib/python3.7/site-packages/ /usr/local/lib/python3.7/site-packages/
+COPY . /app
 
 WORKDIR /app
+RUN pip install --no-cache-dir \
+    -e ./jticker-core \
+    -e ./
 
-COPY --chown=app:app . /app/
-RUN pip install --no-cache-dir -U pip
-RUN pip install --no-cache-dir -e ./jticker-core
-RUN pip install --no-cache-dir -e .
-
-USER app
-
-ENTRYPOINT ["/app/run.sh", "app"]
+ENTRYPOINT ["python", "-m", "jticker_aggregator"]
