@@ -79,3 +79,28 @@ async def test_stuck(not_started_aggregator, mocked_kafka, config):
     mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
     async with not_started_aggregator:
         await async_condition(lambda: not_started_aggregator.crashed)
+
+
+@pytest.mark.asyncio
+async def test_provider_iterated_twice(_candle_provider, mocked_kafka, config,
+                                       timestamp_utc_minute_now, influx_client, wait_candles):
+    async with _candle_provider:
+        tp = RawTradingPair(symbol="ab", exchange="ex")
+        mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
+        await _candle_provider._candle_subscriptions_present.wait()
+        c = Candle(
+            exchange="ex",
+            symbol="ab",
+            interval=Interval.MIN_1,
+            timestamp=timestamp_utc_minute_now,
+            open=2,
+            high=4,
+            low=1,
+            close=3,
+        )
+        mocked_kafka.put(tp.topic, c.to_json())
+        async for c in _candle_provider:
+            break
+        mocked_kafka.put(tp.topic, c.to_json())
+        async for c in _candle_provider:
+            break

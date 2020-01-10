@@ -33,6 +33,7 @@ class CandleProvider(Service):
             auto_offset_reset="earliest",
             group_id=config.kafka_candles_consumer_group_id,
         )
+        self._candle_consumer_started = False
         # aiokafka bug workaround
         # https://github.com/aio-libs/aiokafka/issues/536
         # https://github.com/aio-libs/aiokafka/pull/539
@@ -89,8 +90,10 @@ class CandleProvider(Service):
         logger.info("candle consumer starting...")
         try:
             timeout = float(self.config.kafka_candles_stuck_timeout)
-            await asyncio.wait_for(self.candles_consumer.start(), timeout)
-            logger.info("candle consumer started")
+            if not self._candle_consumer_started:
+                await asyncio.wait_for(self.candles_consumer.start(), timeout)
+                self._candle_consumer_started = True
+                logger.info("candle consumer started")
             async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
