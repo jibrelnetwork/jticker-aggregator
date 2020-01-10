@@ -38,14 +38,17 @@ class _FakeAioKafkaConsumer:
         self._fake_kafka = _fake_kafka
         self.q = asyncio.Queue()
         self._offsets = collections.defaultdict(int)
+        self._started = False
         for topic in topics:
             self._fake_kafka.subscribe(topic, self.q)
 
     async def start(self):
-        pass
+        assert self._started is False
+        self._started = True
 
     async def stop(self):
-        pass
+        assert self._started is True
+        self._started = False
 
     @dataclass
     class Message:
