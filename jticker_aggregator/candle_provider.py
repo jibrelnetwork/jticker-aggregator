@@ -19,6 +19,7 @@ class CandleProvider(Service):
     def __init__(self, config: Dict):
         super().__init__()
         self.config = config
+        self.timeout = float(self.config.kafka_stuck_timeout)
         self.trading_pairs_consumer = AIOKafkaConsumer(
             config.kafka_trading_pairs_topic,
             loop=asyncio.get_event_loop(),
@@ -45,7 +46,7 @@ class CandleProvider(Service):
         ConnectionError,
         max_time=5 * 60)
     async def on_start(self):
-        await self.trading_pairs_consumer.start()
+        await asyncio.wait_for(self.trading_pairs_consumer.start(), self.timeout)
         self.add_future(self._consume_trading_pairs())
         self.add_future(self._subscribe_trading_pairs())
 
@@ -53,7 +54,7 @@ class CandleProvider(Service):
         await self.trading_pairs_consumer.stop()
 
     async def _consume_trading_pairs(self):
-        async for message in self.trading_pairs_consumer:
+        async for message in StuckTimeOuter(self.trading_pairs_consumer, timeout=self.timeout):
             logger.debug("Trading pair message received: {}", message)
             try:
                 tp = RawTradingPair.from_json(message.value)
@@ -89,12 +90,11 @@ class CandleProvider(Service):
         await self._candle_subscriptions_present.wait()
         logger.info("candle consumer starting...")
         try:
-            timeout = float(self.config.kafka_candles_stuck_timeout)
             if not self._candle_consumer_started:
-                await asyncio.wait_for(self.candles_consumer.start(), timeout)
+                await asyncio.wait_for(self.candles_consumer.start(), self.timeout)
                 self._candle_consumer_started = True
                 logger.info("candle consumer started")
-            async for message in StuckTimeOuter(self.candles_consumer, timeout=timeout):
+            async for message in StuckTimeOuter(self.candles_consumer, timeout=self.timeout):
                 logger.debug("Candle message received: {}", message)
                 try:
                     candle = Candle.from_json(message.value)
