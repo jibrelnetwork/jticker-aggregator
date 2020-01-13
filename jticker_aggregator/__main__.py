@@ -36,8 +36,8 @@ def parser(base_parser, version: str) -> Dict:
                              help="Trading pairs kafka topic [default: %(default)s]")
     base_parser.add_argument("--kafka-candles-consumer-group-id", default="aggregator",
                              help="Kafka candles consumer group id [default: %(default)s]")
-    base_parser.add_argument("--kafka-candles-stuck-timeout", default="600",
-                             help="Kafka candle consumer stuck timeout in seconds "
+    base_parser.add_argument("--kafka-stuck-timeout", default="600",
+                             help="Kafka consumer stuck timeout in seconds "
                                   "[default: %(default)s]")
     return base_parser
 
