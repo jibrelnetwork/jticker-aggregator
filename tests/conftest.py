@@ -80,7 +80,7 @@ def mocked_kafka(monkeypatch):
 def config():
     config = Dict(
         kafka_trading_pairs_topic="test_kafka_trading_pairs_topic",
-        kafka_candles_stuck_timeout="1",
+        kafka_stuck_timeout="1",
         trading_pair_queue_timeout="0.01",
         stats_log_interval=0.1,
         time_series_host="localhost",

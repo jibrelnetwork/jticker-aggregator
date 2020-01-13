@@ -19,7 +19,7 @@ class CandleProvider(Service):
     def __init__(self, config: Dict):
         super().__init__()
         self.config = config
-        self.timeout = float(self.config.kafka_candles_stuck_timeout)
+        self.timeout = float(self.config.kafka_stuck_timeout)
         self.trading_pairs_consumer = AIOKafkaConsumer(
             config.kafka_trading_pairs_topic,
             loop=asyncio.get_event_loop(),
