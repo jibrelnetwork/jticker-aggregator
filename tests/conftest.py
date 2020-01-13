@@ -88,6 +88,7 @@ def config():
         time_series_allow_migrations=True,
         time_series_default_row_limit="1000",
         time_series_chunk_size="1",
+        time_series_client_timeout="10",
     )
     injector.register(name="config")(lambda: config)
     injector.register(name="version")(lambda: "tests")
