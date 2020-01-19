@@ -1,11 +1,11 @@
 import asyncio
-
-import backoff
-from mode import Service
-from addict import Dict
 from typing import List
 
-from jticker_core import inject, register, AbstractTimeSeriesStorage, TimeSeriesException, Candle
+import backoff
+from addict import Dict
+from mode import Service
+
+from jticker_core import AbstractTimeSeriesStorage, Candle, TimeSeriesException, inject, register
 
 from .stats import AggregatorStats
 
@@ -43,8 +43,10 @@ class CandleConsumer(Service):
         interval=1)
     async def _store_candles(self):
         while True:
-            while not self._time_series_chunk:
+            while True:
                 await asyncio.sleep(0.25)
+                if self._time_series_chunk:
+                    break
             chunk, self._time_series_chunk = self._time_series_chunk, []
             await self._time_series.add_candles(chunk)
 
