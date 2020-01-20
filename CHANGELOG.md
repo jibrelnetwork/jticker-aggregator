@@ -2,3 +2,4 @@
 ## add
 - abstract time series support
 - sync with core uniform «objects»
+- reduce time series writes count
