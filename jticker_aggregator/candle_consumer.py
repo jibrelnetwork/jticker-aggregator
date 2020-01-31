@@ -29,7 +29,8 @@ class CandleConsumer(Service):
             self._stats,
         ]
 
-    async def on_start(self):
+    async def on_started(self):
+        await self._time_series.migrate()
         self.add_future(self._store_candles())
 
     async def on_stop(self):
