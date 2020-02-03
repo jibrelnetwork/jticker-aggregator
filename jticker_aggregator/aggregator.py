@@ -1,14 +1,14 @@
 import backoff
 import prometheus_client
-from mode import Service
-from loguru import logger
-from kafka.errors import UnknownMemberIdError
 from aiohttp import web
+from kafka.errors import UnknownMemberIdError
+from loguru import logger
+from mode import Service
 
-from jticker_core import inject, register, Rate, WebServer
+from jticker_core import Rate, WebServer, inject, register
 
-from .candle_provider import CandleProvider
 from .candle_consumer import CandleConsumer
+from .candle_provider import CandleProvider
 
 
 @register(name="aggregator")
