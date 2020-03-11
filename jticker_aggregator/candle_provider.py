@@ -2,14 +2,14 @@ import asyncio
 import json
 
 import backoff
-from mode import Service
+from addict import Dict
 from aiokafka import AIOKafkaConsumer
 from aiokafka.errors import ConnectionError
-from addict import Dict
 from loguru import logger
+from mode import Service
 
-from jticker_core import (RawTradingPair, register, inject, normalize_kafka_topic, StuckTimeOuter,
-                          Candle)
+from jticker_core import (Candle, RawTradingPair, StuckTimeOuter, inject, normalize_kafka_topic,
+                          register)
 
 
 @register(singleton=True, name="candle_provider")
@@ -54,7 +54,7 @@ class CandleProvider(Service):
         await self.trading_pairs_consumer.stop()
 
     async def _consume_trading_pairs(self):
-        async for message in StuckTimeOuter(self.trading_pairs_consumer, timeout=self.timeout):
+        async for message in self.trading_pairs_consumer:
             logger.debug("Trading pair message received: {}", message)
             try:
                 tp = RawTradingPair.from_json(message.value)
