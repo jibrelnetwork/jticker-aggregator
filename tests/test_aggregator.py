@@ -1,17 +1,14 @@
+import asyncio
+
 import pytest
 
-from jticker_core import RawTradingPair, Candle, Interval
-from jticker_core.testing import async_condition
+from jticker_core import Candle, Interval, Order, RawTradingPair
 
 
 @pytest.mark.asyncio
-async def test_successful_lifecycle(aggregator, mocked_kafka, config, timestamp_utc_minute_now,
-                                    influx_client, wait_candles):
-    tp = RawTradingPair(symbol="ab", exchange="ex")
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-    await async_condition(lambda: len(mocked_kafka.subs) == 2)
-    assert tp.topic in mocked_kafka.subs
-    c = Candle(
+async def test_successful_lifecycle(not_started_aggregator, timestamp_utc_minute_now):
+    tp = RawTradingPair(exchange="ex", symbol="ab")
+    c1 = Candle(
         exchange="ex",
         symbol="ab",
         interval=Interval.MIN_1,
@@ -21,86 +18,20 @@ async def test_successful_lifecycle(aggregator, mocked_kafka, config, timestamp_
         low=1,
         close=3,
     )
-    mocked_kafka.put(tp.topic, c.to_json())
-    cs = await wait_candles(aggregator.candle_consumer._time_series, tp)
-    assert len(cs) == 1
-    assert cs[0] == c
-
-
-@pytest.mark.asyncio
-async def test_bad_trading_pair_format(aggregator, mocked_kafka, config):
-    mocked_kafka.put(config.kafka_trading_pairs_topic, "bad string")
-    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-    await async_condition(lambda: len(mocked_kafka.subs) == 2)
-
-
-@pytest.mark.asyncio
-async def test_trading_pair_update(aggregator, mocked_kafka, config):
-    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-    await async_condition(lambda: len(mocked_kafka.subs) == 2)
-    tp.symbol = "CHANGED"
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-    tps = aggregator.candle_provider.trading_pairs
-    await async_condition(lambda: "CHANGED" in {t.symbol for t in tps.values()})
-
-
-@pytest.mark.asyncio
-async def test_bad_candle_format(aggregator, mocked_kafka, config, timestamp_utc_minute_now,
-                                 wait_candles):
-    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-    await async_condition(lambda: len(mocked_kafka.subs) == 2)
-    assert tp.topic in mocked_kafka.subs
-    c = Candle(
+    c2 = Candle(
         exchange="ex",
-        symbol="ETHBTC",
+        symbol="ab",
         interval=Interval.MIN_1,
-        timestamp=timestamp_utc_minute_now,
+        timestamp=timestamp_utc_minute_now + 60,
         open=2,
         high=4,
         low=1,
         close=3,
     )
-    good_candle = c.to_json()
-    mocked_kafka.put(tp.topic, "bad string")
-    c.high, c.low = c.low, c.high
-    mocked_kafka.put(tp.topic, c.to_json())
-    mocked_kafka.put(tp.topic, good_candle)
-    cs = await wait_candles(aggregator.candle_consumer._time_series, tp)
-    assert len(cs) == 1
-    assert cs[0] == Candle.from_json(good_candle)
-
-
-@pytest.mark.asyncio
-async def test_stuck(not_started_aggregator, mocked_kafka, config):
-    tp = RawTradingPair(symbol="ETHBTC", exchange="ex")
-    mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-    async with not_started_aggregator:
-        await async_condition(lambda: not_started_aggregator.crashed)
-
-
-@pytest.mark.asyncio
-async def test_provider_iterated_twice(_candle_provider, mocked_kafka, config,
-                                       timestamp_utc_minute_now, influx_client, wait_candles):
-    async with _candle_provider:
-        tp = RawTradingPair(symbol="ab", exchange="ex")
-        mocked_kafka.put(config.kafka_trading_pairs_topic, tp.to_json())
-        await _candle_provider._candle_subscriptions_present.wait()
-        c = Candle(
-            exchange="ex",
-            symbol="ab",
-            interval=Interval.MIN_1,
-            timestamp=timestamp_utc_minute_now,
-            open=2,
-            high=4,
-            low=1,
-            close=3,
-        )
-        mocked_kafka.put(tp.topic, c.to_json())
-        async for c in _candle_provider:
-            break
-        mocked_kafka.put(tp.topic, c.to_json())
-        async for c in _candle_provider:
-            break
+    async with not_started_aggregator.stream_storage as st:
+        await st.add_candles([c1, c1, c1, c2, c2], flush=True)
+    async with not_started_aggregator as ag:
+        await asyncio.sleep(0.1)
+        cs = await ag.time_series.get_candles(tp, order=Order.ASC)
+        assert len(cs) == 2
+        assert (cs[0], cs[1]) == (c1, c2)
