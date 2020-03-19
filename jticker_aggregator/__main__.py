@@ -33,9 +33,9 @@ def parser(base_parser, version: str) -> Dict:
 def main(config: Dict, version: str, aggregator: Aggregator):
     loop = asyncio.get_event_loop()
     ignore_aiohttp_ssl_eror(loop, "3.5.4")
-    configure_logging()
     if config.sentry_dsn:
-        sentry_sdk.init(config.sentry_dsn, release=version)
+        sentry_sdk.init(config.sentry_dsn, release=version, default_integrations=False)
+    configure_logging()
     logger.info("Jticker aggregator version {}", version)
     Worker(aggregator).execute_from_commandline()
 
