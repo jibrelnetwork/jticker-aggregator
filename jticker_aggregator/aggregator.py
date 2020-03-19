@@ -48,6 +48,7 @@ class Aggregator(Service):
             self.stream_storage,
             self.time_series,
             self.web_server,
+            self.stats,
         ]
 
     async def on_started(self):
@@ -66,6 +67,7 @@ class Aggregator(Service):
         async for candle in self.stream_storage.poll_candles():
             chunk.append(candle)
             r.inc()
+            self.stats.candle_stored(candle)
             if len(chunk) < self._time_series_chunk_size:
                 continue
             await self.time_series.add_candles(chunk)
